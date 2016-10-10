@@ -12,7 +12,7 @@ HOMEPAGE="https://wiki.gnome.org/Apps/Web"
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="nss test"
+IUSE="test"
 KEYWORDS="amd64 ~arm ~ppc ~ppc64 ~sparc x86"
 
 COMMON_DEPEND="
@@ -24,17 +24,14 @@ COMMON_DEPEND="
 	>=dev-libs/libxslt-1.1.7
 	>=gnome-base/gsettings-desktop-schemas-0.0.1
 	>=net-dns/avahi-0.6.22[dbus]
-	>=net-libs/webkit-gtk-2.11.4:4
+	>=net-libs/webkit-gtk-2.13.2:4
 	>=net-libs/libsoup-2.48:2.4
 	>=x11-libs/gtk+-3.19.1:3
 	>=x11-libs/libnotify-0.5.1:=
 	gnome-base/gnome-desktop:3=
 
 	dev-db/sqlite:3
-	x11-libs/libwnck:3
 	x11-libs/libX11
-
-	nss? ( dev-libs/nss )
 "
 # epiphany-extensions support was removed in 3.7; let's not pretend it still works
 RDEPEND="${COMMON_DEPEND}
@@ -46,10 +43,9 @@ RDEPEND="${COMMON_DEPEND}
 DEPEND="${COMMON_DEPEND}
 	app-text/yelp-tools
 	dev-libs/appstream-glib
-	>=dev-util/intltool-0.50
 	dev-util/itstool
 	sys-apps/paxctl
-	sys-devel/gettext
+	>=sys-devel/gettext-0.19.8
 	virtual/pkgconfig
 "
 
@@ -69,7 +65,6 @@ src_configure() {
 		--enable-shared \
 		--disable-static \
 		--with-distributor-name=Gentoo \
-		$(use_enable nss) \
 		$(use_enable test tests)
 }
 
