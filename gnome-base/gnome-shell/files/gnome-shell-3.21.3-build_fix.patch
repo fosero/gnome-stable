@@ -1,0 +1,24 @@
+@@ -, +, @@ 
+ libraries
+-Wl,--as-needed. Otherwise some of the parent libs seem to pull in the
+ src/Makefile.am | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+--- a/src/Makefile.am	
++++ a/src/Makefile.am	
+@@ -321,14 +321,14 @@ libgnome_shell_libadd =		\
+ 	gvc/libgvc.la		\
+ 	$(NULL)
+ 
+-libgnome_shell_menu_la_LDFLAGS = $(libgnome_shell_ldflags)
++libgnome_shell_menu_la_LDFLAGS = $(libgnome_shell_ldflags) -R$(MUTTER_TYPELIB_DIR)
+ libgnome_shell_menu_la_LIBADD = $(GNOME_SHELL_LIBS)
+ libgnome_shell_menu_la_CPPFLAGS = $(GNOME_SHELL_CFLAGS)
+ 
+ libgnome_shell_base_la_LIBADD = $(libgnome_shell_libadd)
+ libgnome_shell_base_la_CPPFLAGS = $(gnome_shell_cflags)
+ 
+-libgnome_shell_la_LDFLAGS = $(libgnome_shell_ldflags)
++libgnome_shell_la_LDFLAGS = $(libgnome_shell_ldflags) -R$(MUTTER_TYPELIB_DIR)
+ libgnome_shell_la_LIBADD = $(GNOME_SHELL_LIBS) $(MUTTER_LIBS) libgnome-shell-base.la
+ libgnome_shell_la_CPPFLAGS = $(MUTTER_CFLAGS) $(gnome_shell_cflags)
+ 

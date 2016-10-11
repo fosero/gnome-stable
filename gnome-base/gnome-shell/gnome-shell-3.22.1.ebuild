@@ -27,14 +27,13 @@ COMMON_DEPEND="
 	>=app-crypt/gcr-3.7.5[introspection]
 	>=dev-libs/glib-2.45.3:2[dbus]
 	>=dev-libs/gjs-1.39
-	>=dev-libs/gobject-introspection-1.45.4:=
+	>=dev-libs/gobject-introspection-1.49.1:=
 	dev-libs/libical:=
 	>=x11-libs/gtk+-3.15.0:3[introspection]
-	>=media-libs/clutter-1.21.5:1.0[introspection]
 	>=dev-libs/json-glib-0.13.2
 	>=dev-libs/libcroco-0.6.8:0.6
 	>=gnome-base/gnome-desktop-3.7.90:3=[introspection]
-	>=gnome-base/gsettings-desktop-schemas-3.19.2
+	>=gnome-base/gsettings-desktop-schemas-3.21.3
 	>=gnome-base/gnome-keyring-3.3.90
 	gnome-base/libgnome-keyring
 	>=gnome-extra/evolution-data-server-3.17.2:=
@@ -85,7 +84,6 @@ RDEPEND="${COMMON_DEPEND}
 	>=sys-auth/polkit-0.101[introspection]
 
 	>=app-accessibility/caribou-0.4.8
-	media-libs/cogl[introspection]
 	>=sys-apps/accountsservice-0.6.14[introspection]
 	>=sys-power/upower-0.99:=[introspection]
 
@@ -112,7 +110,7 @@ PDEPEND="
 DEPEND="${COMMON_DEPEND}
 	dev-libs/libxslt
 	>=dev-util/gtk-doc-am-1.17
-	>=dev-util/intltool-0.40
+	>=sys-devel/gettext-0.19.6
 	gnome-base/gnome-common
 	virtual/pkgconfig
 	!!=dev-lang/spidermonkey-1.8.2*
@@ -121,11 +119,11 @@ DEPEND="${COMMON_DEPEND}
 # https://bugs.gentoo.org/show_bug.cgi?id=360413
 
 src_prepare() {
-	# Change favorites defaults, bug #479918
-	eapply "${FILESDIR}"/${PN}-3.14.0-defaults.patch
-
 	# Fix automagic gnome-bluetooth dep, bug #398145
 	eapply "${FILESDIR}"/${PN}-3.12-bluetooth-flag.patch
+
+	# build fix
+	eapply "${FILESDIR}"/${PN}-3.21.3-build_fix.patch
 
 	eautoreconf
 	gnome2_src_prepare
