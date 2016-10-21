@@ -23,6 +23,7 @@ REQUIRED_USE="
 	geoloc? ( introspection )
 	gles2? ( egl )
 	introspection? ( gstreamer )
+	wayland? ( egl )
 	webgl? ( ^^ ( gles2 opengl ) )
 	!webgl? ( ?? ( gles2 opengl ) )
 	|| ( wayland X )
@@ -62,7 +63,7 @@ RDEPEND="
 	geoloc? ( >=app-misc/geoclue-2.1.5:2.0 )
 	gles2? ( media-libs/mesa[gles2] )
 	gstreamer? (
-		>=media-libs/gstreamer-1.2:1.0
+		>=media-libs/gstreamer-1.2.3:1.0
 		>=media-libs/gst-plugins-base-1.2:1.0 )
 	introspection? ( >=dev-libs/gobject-introspection-1.32.0 )
 	libsecret? ( app-crypt/libsecret )
@@ -195,7 +196,6 @@ src_configure() {
 		ruby_interpreter="RUBY=$(type -P ruby19)"
 	fi
 
-	# TODO: Check Web Audio support
 	# should somehow let user select between them?
 	# FIXME: FTL jit is by default x64 only
 	local mycmakeargs=(
@@ -205,7 +205,6 @@ src_configure() {
 		$(cmake-utils_use_find_package gles2 OpenGLES2)
 		$(cmake-utils_use_enable gles2 GLES2)
 		$(cmake-utils_use_enable gstreamer VIDEO)
-		$(cmake-utils_use_enable gstreamer WEB_AUDIO)
 		$(cmake-utils_use_enable introspection)
 		$(cmake-utils_use_enable jit)
 		$(cmake-utils_use_enable libsecret CREDENTIAL_STORAGE)
