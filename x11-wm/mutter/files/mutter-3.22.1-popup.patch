@@ -1,0 +1,68 @@
+From d748594eb3e9d1cdf52102603ffa94a7518dcc90 Mon Sep 17 00:00:00 2001
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Wed, 19 Oct 2016 13:43:38 +0200
+Subject: [PATCH] wayland: Force grab-less xdg_popup on top
+
+mutter would remove focus from a toplevel when showing one of its
+transient window which is not on top and not focused.
+
+When using xdg_popup without grab as allowed in xdg_shell v6, the popup
+wouldn't be focused, and if an intermediate event occurs before the
+popup is shown, it's not placed on top either, which could randomly
+trigger a loss of focus in the corresponding toplevel window.
+
+For grab-less xdg_popup set the type to META_WINDOW_OVERRIDE_OTHER and
+make sure such windows are placed on top by mutter.
+
+https://bugzilla.gnome.org/show_bug.cgi?id=773210
+---
+ src/core/window.c                    |  3 ++-
+ src/wayland/meta-wayland-xdg-shell.c | 11 +++++++++++
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/src/core/window.c b/src/core/window.c
+index 458e2d7..84c34ac 100644
+--- a/src/core/window.c
++++ b/src/core/window.c
+@@ -2121,6 +2121,8 @@ window_state_on_map (MetaWindow *window,
+       *takes_focus = FALSE;
+       *places_on_top = FALSE;
+       break;
++    case META_WINDOW_OVERRIDE_OTHER:
++      *places_on_top = TRUE;
+     case META_WINDOW_DOCK:
+     case META_WINDOW_DESKTOP:
+     case META_WINDOW_SPLASHSCREEN:
+@@ -2132,7 +2134,6 @@ window_state_on_map (MetaWindow *window,
+     case META_WINDOW_NOTIFICATION:
+     case META_WINDOW_COMBO:
+     case META_WINDOW_DND:
+-    case META_WINDOW_OVERRIDE_OTHER:
+       /* don't focus any of these; places_on_top may be irrelevant for some of
+        * these (e.g. dock)--but you never know--the focus window might also be
+        * of the same type in some weird situation...
+diff --git a/src/wayland/meta-wayland-xdg-shell.c b/src/wayland/meta-wayland-xdg-shell.c
+index 450acda..0801683 100644
+--- a/src/wayland/meta-wayland-xdg-shell.c
++++ b/src/wayland/meta-wayland-xdg-shell.c
+@@ -839,6 +839,17 @@ finish_popup_setup (MetaWaylandXdgPopup *xdg_popup)
+ 
+       xdg_popup->popup = popup;
+     }
++  else
++    {
++      /* By default, xdg_popups have a type set to WINDOW_DROPDOWN_MENU
++       * in xdg_popup_role_managed()
++       * However, without a grab, we don't really know the actual semantic
++       * of the xdg_popup, so use WINDOW_OVERRIDE_OTHER to distinguish
++       * those, and possibly set them on top just like override redirect
++       * windows in X11.
++       */
++      meta_window_set_type (window, META_WINDOW_OVERRIDE_OTHER);
++    }
+ }
+ 
+ static void
+-- 
+2.9.3
+

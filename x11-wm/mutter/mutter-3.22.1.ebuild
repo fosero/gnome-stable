@@ -75,6 +75,14 @@ RDEPEND="${COMMON_DEPEND}
 	!x11-misc/expocity
 "
 
+src_prepare() {
+
+	eapply "${FILESDIR}"/${P}-popup.patch
+
+	gnome2_src_prepare
+
+}
+
 src_configure() {
 	gnome2_src_configure \
 		--disable-static \
