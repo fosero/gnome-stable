@@ -2,56 +2,50 @@
 # Distributed under the terms of the GNU General Public License v2
 # $Id$
 
-EAPI="6"
+EAPI=6
 
-inherit gnome2 eutils linux-info vala
+inherit gnome2 linux-info systemd
 
 DESCRIPTION="System-wide Linux Profiler"
 HOMEPAGE="http://sysprof.com/"
 
 LICENSE="GPL-2+"
 SLOT="0"
-KEYWORDS="amd64"
-IUSE="dbus introspection gtk vala"
+KEYWORDS="~amd64 ~x86"
+IUSE="debug gtk systemd"
 
-RDEPEND=">=dev-libs/glib-2.44:2
-	dbus? ( >=sys-apps/systemd-222
-		sys-auth/polkit )
-	gtk? ( >=x11-libs/gtk+-3.21.3:3 )
-	vala? ( $(vala_depend) )"
-
+RDEPEND="
+	>=dev-libs/glib-2.44:2
+	gtk? ( >=x11-libs/gtk+-3.21.5:3 )
+	systemd? (
+		sys-auth/polkit
+		>=sys-apps/systemd-222 )
+"
 DEPEND="${RDEPEND}
-	>=sys-kernel/linux-headers-2.6.32
-	introspection? ( >=dev-libs/gobject-introspection-1.42 )
+	app-text/yelp-tools
 	>=sys-devel/gettext-0.19.6
-	virtual/pkgconfig"
+	>=sys-kernel/linux-headers-2.6.32
+	virtual/pkgconfig
+"
 
 pkg_pretend() {
-
 	kernel_is -ge 2 6 31 && return
 	die "Sysprof will not work with a kernel version less than 2.6.31"
-
-}
-
-src_prepare() {
-
-	use vala && vala_src_prepare
-	gnome2_src_prepare
-
 }
 
 src_configure() {
-
+	# introspection & vala not use in build system
 	gnome2_src_configure \
-		$(use_enable dbus sysprofd) \
-		$(use_enable introspection) \
+		$(use_enable debug) \
 		$(use_enable gtk) \
-		$(use_enable vala)
-
+		--disable-introspection \
+		--disable-static \
+		--disable-vala \
+		--with-sysprofd=$(usex systemd bundled no) \
+		--with-systemdsystemunitdir=$(systemd_get_systemunitdir)
 }
 
 pkg_postinst() {
-
 	gnome2_pkg_postinst
 
 	elog "On many systems, especially amd64, it is typical that with a modern"
@@ -63,5 +57,4 @@ pkg_postinst() {
 	elog "means a CPU register is used for the frame pointer instead of other"
 	elog "purposes, which means a very minimal performance loss when there is"
 	elog "register pressure."
-
 }
