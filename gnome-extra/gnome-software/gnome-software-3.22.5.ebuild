@@ -2,7 +2,7 @@
 # Distributed under the terms of the GNU General Public License v2
 # $Id$
 
-EAPI="6"
+EAPI=6
 PYTHON_COMPAT=( python2_7 )
 
 inherit gnome2 python-any-r1 virtualx
@@ -13,38 +13,42 @@ HOMEPAGE="http://wiki.gnome.org/Apps/Software"
 LICENSE="GPL-2+"
 SLOT="0"
 KEYWORDS="~amd64"
-IUSE="+flatpak gnome-desktop spell test gudev webapp"
-
-#	>=app-admin/packagekit-base-1.1
+IUSE="+flatpak gnome spell test gudev webapp"
 
 RDEPEND="
+	>=app-admin/packagekit-base-1.1.0
+	app-crypt/libsecret
 	dev-db/sqlite:3
-	>=dev-libs/appstream-glib-0.6.1:0
-	>=dev-libs/glib-2.45.8:2
+	>=dev-libs/appstream-glib-0.6.5:0
+	>=dev-libs/glib-2.46:2
 	>=dev-libs/json-glib-1.1.1
-	spell? ( app-text/gtkspell:3 )
-	gnome-desktop? ( >=gnome-base/gnome-desktop-3.17.92:3= )
 	>=gnome-base/gsettings-desktop-schemas-3.11.5
 	>=net-libs/libsoup-2.51.92:2.4
 	sys-auth/polkit
-	app-crypt/libsecret
-	>=x11-libs/gtk+-3.18.2:3
-	>=x11-libs/gdk-pixbuf-2.31.5:2
-	flatpak? ( >=sys-apps/flatpak-0.4.14 )
+	>=x11-libs/gdk-pixbuf-2.31.5
+	>=x11-libs/gtk+-3.20:3
+	flatpak? ( >=sys-apps/flatpak-0.6.12 )
+	gnome? ( >=gnome-base/gnome-desktop-3.17.92:3= )
+	spell? ( app-text/gtkspell:3 )
 	gudev? ( virtual/libgudev )
 "
 DEPEND="${RDEPEND}
-	${PYTHON_DEPS}
 	app-text/docbook-xml-dtd:4.2
 	dev-libs/libxslt
 	>=dev-util/intltool-0.35
 	virtual/pkgconfig
-	test? ( dev-util/dogtail )
+	test? (
+		${PYTHON_DEPS}
+		$(python_gen_any_dep 'dev-util/dogtail[${PYTHON_USEDEP}]') )
 "
 # test? ( dev-util/valgrind )
 
+python_check_deps() {
+	use test && has_version "dev-util/dogtail[${PYTHON_USEDEP}]"
+}
+
 pkg_setup() {
-	python-any-r1_pkg_setup
+	use test && python-any-r1_pkg_setup
 }
 
 src_prepare() {
@@ -59,16 +63,23 @@ src_configure() {
 	# FIXME: investigate limba and firmware update support
 	gnome2_src_configure \
 		--enable-man \
+		--enable-packagekit \
+		--enable-polkit \
 		--disable-firmware \
 		--disable-limba \
+		--disable-ostree \
+		--disable-rpm \
+		--disable-steam \
+		--disable-xdg-app \
 		$(use_enable flatpak) \
-		$(use_enable gnome-desktop) \
+		$(use_enable gnome gnome-desktop) \
 		$(use_enable spell gtkspell) \
 		$(use_enable test dogtail) \
+		$(use_enable test tests) \
 		$(use_enable gudev) \
 		$(use_enable webapp webapps)
 }
 
 src_test() {
-	Xemake check TESTS_ENVIRONMENT="dbus-run-session"
+	virtx emake check TESTS_ENVIRONMENT="dbus-run-session"
 }
