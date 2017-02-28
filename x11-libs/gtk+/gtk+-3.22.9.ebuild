@@ -1,4 +1,4 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 # $Id$
 
@@ -18,7 +18,11 @@ REQUIRED_USE="
 	xinerama? ( X )
 "
 
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~amd64-fbsd ~x86-fbsd ~x86-freebsd ~x86-interix ~amd64-linux ~arm-linux ~x86-linux ~ppc-macos ~x86-macos ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
+KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~amd64-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux ~ppc-macos ~x86-macos ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
+
+# Upstream wants us to do their job:
+# https://bugzilla.gnome.org/show_bug.cgi?id=768662#c1
+RESTRICT="test"
 
 # FIXME: introspection data is built against system installation of gtk+:3,
 # bug #????
@@ -29,7 +33,7 @@ COMMON_DEPEND="
 	media-libs/fontconfig[${MULTILIB_USEDEP}]
 	>=media-libs/libepoxy-1.0[${MULTILIB_USEDEP}]
 	>=x11-libs/cairo-1.14[aqua?,glib,svg,X?,${MULTILIB_USEDEP}]
-	>=x11-libs/gdk-pixbuf-2.30:2[introspection?,X?,${MULTILIB_USEDEP}]
+	>=x11-libs/gdk-pixbuf-2.30:2[introspection?,${MULTILIB_USEDEP}]
 	>=x11-libs/pango-1.37.3[introspection?,${MULTILIB_USEDEP}]
 	x11-misc/shared-mime-info
 
@@ -41,7 +45,7 @@ COMMON_DEPEND="
 	introspection? ( >=dev-libs/gobject-introspection-1.39:= )
 	wayland? (
 		>=dev-libs/wayland-1.9.91[${MULTILIB_USEDEP}]
-		>=dev-libs/wayland-protocols-1.7[${MULTILIB_USEDEP}]
+		>=dev-libs/wayland-protocols-1.7
 		media-libs/mesa[wayland,${MULTILIB_USEDEP}]
 		>=x11-libs/libxkbcommon-0.2[${MULTILIB_USEDEP}]
 	)
@@ -64,7 +68,7 @@ DEPEND="${COMMON_DEPEND}
 	app-text/docbook-xml-dtd:4.1.2
 	dev-libs/libxslt
 	dev-libs/gobject-introspection-common
-	>=dev-util/gdbus-codegen-2.38.2
+	>=dev-util/gdbus-codegen-2.48
 	>=dev-util/gtk-doc-am-1.20
 	>=sys-devel/gettext-0.19.7[${MULTILIB_USEDEP}]
 	virtual/pkgconfig[${MULTILIB_USEDEP}]
@@ -97,7 +101,7 @@ PDEPEND="
 "
 
 MULTILIB_CHOST_TOOLS=(
-	/usr/bin/gtk-query-immodules-3.0
+	/usr/bin/gtk-query-immodules-3.0$(get_exeext)
 )
 
 strip_builddir() {
@@ -130,10 +134,7 @@ src_prepare() {
 	fi
 
 	# gtk-update-icon-cache is installed by dev-util/gtk-update-icon-cache
-	eapply "${FILESDIR}"/${PN}-3.16.2-remove_update-icon-cache.patch
-
-	# fix wayland issue
-	eapply "${FILESDIR}"/${P}-popup_grab.patch
+	eapply "${FILESDIR}"/${PN}-3.22.2-update-icon-cache.patch
 
 	eautoreconf
 	gnome2_src_prepare
@@ -181,6 +182,12 @@ multilib_src_test() {
 
 multilib_src_install() {
 	gnome2_src_install
+}
+
+multilib_src_install_all() {
+	insinto /etc/gtk-3.0
+	doins "${FILESDIR}"/settings.ini
+	einstalldocs
 }
 
 pkg_preinst() {
