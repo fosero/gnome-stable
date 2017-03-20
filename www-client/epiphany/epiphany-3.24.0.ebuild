@@ -19,16 +19,18 @@ COMMON_DEPEND="
 	>=app-crypt/gcr-3.5.5:=
 	>=app-crypt/libsecret-0.14
 	>=app-text/iso-codes-0.35
-	>=dev-libs/glib-2.44:2[dbus]
+	>=dev-libs/glib-2.46:2[dbus]
 	>=dev-libs/libxml2-2.6.12:2
 	>=dev-libs/libxslt-1.1.7
 	>=gnome-base/gsettings-desktop-schemas-0.0.1
 	>=net-dns/avahi-0.6.22[dbus]
-	>=net-libs/webkit-gtk-2.13.2:4
+	>=net-libs/webkit-gtk-2.15.90:4
 	>=net-libs/libsoup-2.48:2.4
 	>=x11-libs/gtk+-3.19.1:3
+	>=x11-libs/gdk-pixbuf-2.36.5:2
 	>=x11-libs/libnotify-0.5.1:=
 	gnome-base/gnome-desktop:3=
+	>=dev-libs/json-glib-0.14
 
 	dev-db/sqlite:3
 	x11-libs/libX11
@@ -49,22 +51,13 @@ DEPEND="${COMMON_DEPEND}
 	virtual/pkgconfig
 "
 
-src_prepare() {
-	# Fix unittests
-	# https://bugzilla.gnome.org/show_bug.cgi?id=751591
-	epatch "${FILESDIR}"/${PN}-3.16.0-unittest-1.patch
-
-	# https://bugzilla.gnome.org/show_bug.cgi?id=751593
-	epatch "${FILESDIR}"/${PN}-3.14.0-unittest-2.patch
-
-	gnome2_src_prepare
-}
-
 src_configure() {
 	gnome2_src_configure \
 		--enable-shared \
 		--disable-static \
 		--with-distributor-name=Gentoo \
+		--disable-firefox-sync \
+		--with-libhttpseverywhere=no \
 		$(use_enable test tests)
 }
 
