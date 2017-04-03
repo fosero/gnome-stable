@@ -1,6 +1,5 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
 EAPI=6
 PYTHON_COMPAT=( python2_7 )
@@ -13,13 +12,13 @@ HOMEPAGE="http://wiki.gnome.org/Apps/Software"
 LICENSE="GPL-2+"
 SLOT="0"
 KEYWORDS="~amd64"
-IUSE="+flatpak gnome spell test gudev webapp"
+IUSE="+flatpak gnome spell test udev webapp"
 
 RDEPEND="
 	>=app-admin/packagekit-base-1.1.0
 	app-crypt/libsecret
 	dev-db/sqlite:3
-	>=dev-libs/appstream-glib-0.6.5:0
+	>=dev-libs/appstream-glib-0.6.7:0
 	>=dev-libs/glib-2.46:2
 	>=dev-libs/json-glib-1.1.1
 	>=gnome-base/gsettings-desktop-schemas-3.11.5
@@ -27,10 +26,10 @@ RDEPEND="
 	sys-auth/polkit
 	>=x11-libs/gdk-pixbuf-2.31.5
 	>=x11-libs/gtk+-3.20:3
-	flatpak? ( >=sys-apps/flatpak-0.6.12 )
+	flatpak? ( >=sys-apps/flatpak-0.8 )
 	gnome? ( >=gnome-base/gnome-desktop-3.17.92:3= )
 	spell? ( app-text/gtkspell:3 )
-	gudev? ( virtual/libgudev )
+	udev? ( virtual/libgudev )
 "
 DEPEND="${RDEPEND}
 	app-text/docbook-xml-dtd:4.2
@@ -76,7 +75,7 @@ src_configure() {
 		$(use_enable spell gtkspell) \
 		$(use_enable test dogtail) \
 		$(use_enable test tests) \
-		$(use_enable gudev) \
+		$(use_enable udev gudev) \
 		$(use_enable webapp webapps)
 }
 
