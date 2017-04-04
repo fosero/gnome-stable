@@ -138,14 +138,6 @@ pkg_setup() {
 }
 
 src_prepare() {
-	# Debian patches to fix support for some arches
-	# https://bugs.webkit.org/show_bug.cgi?id=129540
-	epatch "${FILESDIR}"/${PN}-2.6.0-{hppa,ia64}-platform.patch
-	# https://bugs.webkit.org/show_bug.cgi?id=129542
-	epatch "${FILESDIR}"/${PN}-2.8.1-ia64-malloc.patch
-
-	# https://bugs.webkit.org/show_bug.cgi?id=148379
-	epatch "${FILESDIR}"/${PN}-2.8.5-webkit2gtkinjectedbundle-j1.patch
 
 	gnome2_src_prepare
 }
@@ -207,7 +199,7 @@ src_configure() {
 		$(cmake-utils_use_enable gstreamer VIDEO)
 		$(cmake-utils_use_enable introspection)
 		$(cmake-utils_use_enable jit)
-		$(cmake-utils_use_enable libsecret CREDENTIAL_STORAGE)
+		$(cmake-utils_use_enable libsecret LIBSECRET)
 		$(cmake-utils_use_enable spell SPELLCHECK SPELLCHECK)
 		$(cmake-utils_use_enable wayland WAYLAND_TARGET)
 		$(cmake-utils_use_enable webgl WEBGL)
@@ -218,6 +210,7 @@ src_configure() {
 		-DPORT=GTK
 		-DENABLE_PLUGIN_PROCESS_GTK2=ON
 		-DENABLE_FTL_JIT=ON
+		-DENABLE_THREADED_COMPOSITOR=ON
 		${ruby_interpreter}
 	)
 	if $(tc-getLD) --version | grep -q "GNU gold"; then
