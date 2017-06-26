@@ -123,6 +123,7 @@ src_configure() {
 		$(use_enable sysprof sysprof-plugin) \
 		$(use_enable flatpak flatpak-plugin) \
 		--enable-terminal-plugin \
+                --with-channel=distro \
 		--disable-static
 }
 
