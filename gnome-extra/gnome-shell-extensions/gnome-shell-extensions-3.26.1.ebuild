@@ -1,6 +1,5 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
 EAPI=6
 inherit gnome2 readme.gentoo-r1
@@ -30,8 +29,10 @@ RDEPEND="${COMMON_DEPEND}
 	x11-libs/gtk+:3[introspection]
 	x11-libs/pango[introspection]
 	x11-themes/adwaita-icon-theme
+	x11-wm/mutter[introspection]
 "
 DEPEND="${COMMON_DEPEND}
+	dev-lang/sassc
 	>=sys-devel/gettext-0.19.6
 	virtual/pkgconfig
 "
