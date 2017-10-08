@@ -8,7 +8,7 @@ DESCRIPTION="GNOME 3 compositing window manager based on Clutter"
 HOMEPAGE="https://git.gnome.org/browse/mutter/"
 
 LICENSE="GPL-2+"
-SLOT="0"
+SLOT="0/1"
 
 IUSE="debug gles2 input_devices_wacom +introspection test udev wayland"
 
@@ -23,7 +23,7 @@ COMMON_DEPEND="
 	>=x11-libs/pango-1.30[introspection?]
 	>=x11-libs/cairo-1.14[X]
 	>=x11-libs/gtk+-3.19.8:3[X,introspection?]
-	>=dev-libs/glib-2.49.0:2[dbus]
+	>=dev-libs/glib-2.53.2:2[dbus]
 	>=media-libs/libcanberra-0.26[gtk3]
 	>=x11-libs/startup-notification-0.7
 	>=x11-libs/libXcomposite-0.2
@@ -54,11 +54,11 @@ COMMON_DEPEND="
 	gles2? ( media-libs/mesa[gles2] )
 	input_devices_wacom? ( >=dev-libs/libwacom-0.13 )
 	introspection? ( >=dev-libs/gobject-introspection-1.42:= )
-	udev? ( virtual/libgudev:= )
+	udev? ( >=dev-libs/libgudev-232:= )
 	wayland? (
 		>=dev-libs/libinput-1.4
-		>=dev-libs/wayland-1.6.90
-		>=dev-libs/wayland-protocols-1.7
+		>=dev-libs/wayland-1.13
+		>=dev-libs/wayland-protocols-1.9
 		>=media-libs/mesa-10.3[egl,gbm,wayland]
 		sys-apps/systemd
 		virtual/libgudev:=
@@ -107,6 +107,8 @@ src_configure() {
 	# GLX is forced by mutter but optional in clutter
 	# xlib-egl-platform required by mutter x11 backend
 	# native backend without wayland is useless
+
+	# TODO: need pipewire for remote desktop
 	gnome2_src_configure \
 		--disable-static \
 		--enable-compile-warnings=minimum \
