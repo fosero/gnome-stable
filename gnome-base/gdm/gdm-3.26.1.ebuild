@@ -4,18 +4,18 @@
 EAPI=6
 GNOME2_LA_PUNT="yes"
 
-inherit autotools eutils gnome2 pam readme.gentoo-r1 systemd user versionator
+inherit eutils gnome2 pam readme.gentoo-r1 systemd user versionator
 
 DESCRIPTION="GNOME Display Manager for managing graphical display servers and user logins"
 HOMEPAGE="https://wiki.gnome.org/Projects/GDM"
 
 SRC_URI="${SRC_URI}
-	branding? ( http://www.mail-archive.com/tango-artists@lists.freedesktop.org/msg00043/tango-gentoo-v1.1.tar.gz )
+	branding? ( https://www.mail-archive.com/tango-artists@lists.freedesktop.org/msg00043/tango-gentoo-v1.1.tar.gz )
 "
 
 LICENSE="
 	GPL-2+
-	branding? ( CC-Sampling-Plus-1.0 )
+	branding? ( CC-BY-SA-4.0 )
 "
 
 SLOT="0"
@@ -48,10 +48,10 @@ COMMON_DEPEND="
 	x11-libs/libXdmcp
 	x11-libs/libXext
 	x11-libs/libXft
-	>=x11-misc/xdg-utils-1.0.2-r3
 	x11-libs/libxcb
-	virtual/pam
+	>=x11-misc/xdg-utils-1.0.2-r3
 
+	virtual/pam
 	>=sys-apps/systemd-186:0=[pam]
 
 	sys-auth/pambase[systemd]
@@ -131,7 +131,6 @@ src_prepare() {
 	# Show logo when branding is enabled
 	use branding && eapply "${FILESDIR}/${PN}-3.8.4-logo.patch"
 
-	eautoreconf
 	gnome2_src_prepare
 }
 
@@ -148,6 +147,7 @@ src_configure() {
 
 	gnome2_src_configure \
 		--enable-gdm-xsession \
+		--enable-user-display-server \
 		--with-run-dir=/run/gdm \
 		--localstatedir="${EPREFIX}"/var \
 		--disable-static \
@@ -207,10 +207,7 @@ pkg_postinst() {
 	done
 	eend ${ret}
 
-	readme.gentoo_print_elog
+	systemd_reenable gdm.service
 
-	if ! version_is_at_least 3.16.0 ${REPLACING_VERSIONS}; then
-		ewarn "GDM will now use a new TTY per logged user as explained at:"
-		ewarn "https://wiki.gentoo.org/wiki/Project:GNOME/GNOME3-Troubleshooting#GDM_.3E.3D_3.16_opens_one_graphical_session_per_user"
-	fi
+	readme.gentoo_print_elog
 }
