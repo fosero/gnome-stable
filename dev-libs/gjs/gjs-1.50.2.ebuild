@@ -17,10 +17,10 @@ RDEPEND="
 	>=dev-libs/gobject-introspection-1.52.1:=
 
 	sys-libs/readline:0
-	dev-lang/spidermonkey:38
+	dev-lang/spidermonkey:52
 	virtual/libffi
 	cairo? ( x11-libs/cairo[X] )
-	gtk? ( x11-libs/gtk+:3 )
+	gtk? ( >=x11-libs/gtk+-3.20:3 )
 "
 DEPEND="${RDEPEND}
 	gnome-base/gnome-common
@@ -29,11 +29,6 @@ DEPEND="${RDEPEND}
 	test? ( sys-apps/dbus )
 "
 
-PATCHES=(
-	# Disable broken unittests, upstream bug #????
-	# "${FILESDIR}"/${PN}-1.48.2-disable-unittest.patch
-)
-
 src_configure() {
 	# FIXME: add systemtap/dtrace support, like in glib:2
 	# FIXME: --enable-systemtap installs files in ${D}/${D} for some reason
@@ -41,7 +36,7 @@ src_configure() {
 	gnome2_src_configure \
 		--disable-systemtap \
 		--disable-dtrace \
-		--disable-coverage \
+		--disable-code-coverage \
 		$(use_with cairo cairo) \
 		$(use_with gtk) \
 		$(use_with test dbus-tests) \
