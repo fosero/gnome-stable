@@ -1,4 +1,4 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -126,7 +126,9 @@ src_prepare() {
 	# gtk-update-icon-cache is installed by dev-util/gtk-update-icon-cache
 	eapply "${FILESDIR}"/${PN}-3.22.2-update-icon-cache.patch
 
-	eautomake
+	# Fix broken autotools logic
+	eapply "${FILESDIR}"/${PN}-3.22.20-libcloudproviders-automagic.patch
+
 	eautoreconf
 	gnome2_src_prepare
 }
@@ -134,6 +136,7 @@ src_prepare() {
 multilib_src_configure() {
 	# need libdir here to avoid a double slash in a path that libtool doesn't
 	# grok so well during install (// between $EPREFIX and usr ...)
+	# cloudprovider is not packaged in Gentoo
 	ECONF_SOURCE=${S} \
 	gnome2_src_configure \
 		$(use_enable aqua quartz-backend) \
@@ -150,8 +153,9 @@ multilib_src_configure() {
 		$(use_enable X xkb) \
 		$(use_enable X xrandr) \
 		$(use_enable xinerama) \
-		--disable-papi \
+		--disable-cloudproviders \
 		--disable-mir-backend \
+		--disable-papi \
 		--enable-man \
 		--with-xml-catalog="${EPREFIX}"/etc/xml/catalog \
 		--libdir="${EPREFIX}"/usr/$(get_libdir) \
@@ -176,8 +180,8 @@ multilib_src_install() {
 }
 
 multilib_src_install_all() {
-	insinto /etc/gtk-3.0
-	doins "${FILESDIR}"/settings.ini
+	# insinto /etc/gtk-3.0
+	# doins "${FILESDIR}"/settings.ini
 	# Skip README.{in,commits,win32} and useless ChangeLog that would get installed by default
 	DOCS=( AUTHORS NEWS README )
 	einstalldocs
