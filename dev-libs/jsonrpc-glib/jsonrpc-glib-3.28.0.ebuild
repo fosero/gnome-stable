@@ -10,7 +10,7 @@ DESCRIPTION="Jsonrpc-GLib is a library to communicate with JSON-RPC based peers 
 HOMEPAGE="https://git.gnome.org/browse/jsonrpc-glib/tree/"
 
 LICENSE="LGPL-2.1"
-SLOT="0"
+SLOT="0/1"
 IUSE="doc introspection vala"
 
 KEYWORDS="amd64"
