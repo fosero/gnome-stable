@@ -17,8 +17,8 @@ KEYWORDS="amd64"
 
 
 RDEPEND="
-	dev-libs/glib:2
-	x11-libs/gtk+:3
+	>=dev-libs/glib-2.56:2
+	>=x11-libs/gtk+-3.22.15:3
 	sys-devel/gettext
 "
 DEPEND="${RDEPEND}
