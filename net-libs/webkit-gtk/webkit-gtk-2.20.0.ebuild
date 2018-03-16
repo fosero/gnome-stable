@@ -50,6 +50,7 @@ RDEPEND="
 	>=media-libs/freetype-2.4.2:2
 	>=media-libs/harfbuzz-1.3.3:=[icu(+)]
 	>=media-libs/libpng-1.4:0=
+	>=app-arch/woff2-1.0.2
 	media-libs/libwebp:=
 	>=dev-libs/libgcrypt-1.7:0=
 	>=net-libs/libsoup-2.42:2.4[introspection?]
@@ -89,6 +90,7 @@ RDEPEND="
 
 # paxctl needed for bug #407085
 # Need real bison, not yacc
+# Need File-Copy-Recursive during build (?)
 DEPEND="${RDEPEND}
 	${PYTHON_DEPS}
 	${RUBY_DEPS}
@@ -103,6 +105,7 @@ DEPEND="${RDEPEND}
 	virtual/pkgconfig
 
 	dev-lang/perl
+	dev-perl/File-Copy-Recursive
 	virtual/perl-Data-Dumper
 	virtual/perl-Carp
 
@@ -219,6 +222,7 @@ src_configure() {
 		-DENABLE_MEDIA_SOURCE=ON
 		-DCMAKE_BUILD_TYPE=Release
 		-DPORT=GTK
+		-DUSE_WOFF2=ON
 		${ruby_interpreter}
 	)
 
