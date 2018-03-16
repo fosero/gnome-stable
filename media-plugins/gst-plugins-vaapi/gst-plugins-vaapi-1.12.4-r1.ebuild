@@ -12,22 +12,22 @@ SRC_URI="https://gstreamer.freedesktop.org/src/${MY_PN}/${MY_PN}-${PV}.tar.xz"
 
 LICENSE="LGPL-2.1"
 SLOT="1.0"
-KEYWORDS="~amd64 ~x86"
+KEYWORDS="~amd64 ~arm64 ~x86"
 
 IUSE="+drm egl opengl wayland +X"
 REQUIRED_USE="|| ( drm opengl wayland X )"
 
 RDEPEND="
 	>=dev-libs/glib-2.40:2[${MULTILIB_USEDEP}]
-	>=media-libs/gstreamer-${PV}:${SLOT}[${MULTILIB_USEDEP}]
-	>=media-libs/gst-plugins-base-${PV}:${SLOT}[${MULTILIB_USEDEP}]
-	>=media-libs/gst-plugins-bad-${PV}:${SLOT}[opengl?,${MULTILIB_USEDEP}]
-	>=x11-libs/libva-1.4.0[drm?,X?,opengl?,wayland?,${MULTILIB_USEDEP}]
+	>=media-libs/gstreamer-1.12.0:${SLOT}[${MULTILIB_USEDEP}]
+	>=media-libs/gst-plugins-base-1.12.0:${SLOT}[${MULTILIB_USEDEP}]
+	>=media-libs/gst-plugins-bad-1.12.0:${SLOT}[opengl?,${MULTILIB_USEDEP}]
+	>=x11-libs/libva-1.4.0:=[drm?,X?,opengl?,wayland?,${MULTILIB_USEDEP}]
 	drm? (
 		>=virtual/libudev-208:=[${MULTILIB_USEDEP}]
 		>=x11-libs/libdrm-2.4.46[${MULTILIB_USEDEP}] )
 	egl? (
-		>=media-libs/gst-plugins-bad-${PV}:${SLOT}[opengl,${MULTILIB_USEDEP}] )
+		>=media-libs/gst-plugins-bad-1.12.0:${SLOT}[opengl,${MULTILIB_USEDEP}] )
 	opengl? (
 		>=virtual/opengl-7.0-r1[${MULTILIB_USEDEP}]
 		>=x11-libs/libX11-1.6.2[${MULTILIB_USEDEP}]
@@ -43,6 +43,14 @@ DEPEND="${RDEPEND}
 "
 
 S="${WORKDIR}/${MY_PN}-${PV}"
+
+src_prepare() {
+
+	epatch ${FILESDIR}/${P}-lower_rank.patch
+
+	default
+
+}
 
 multilib_src_configure() {
 	ECONF_SOURCE=${S} \
