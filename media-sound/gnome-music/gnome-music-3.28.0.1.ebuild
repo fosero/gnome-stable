@@ -4,7 +4,7 @@
 EAPI=6
 PYTHON_COMPAT=( python{3_4,3_5,3_6} )
 
-inherit gnome2 python-single-r1
+inherit gnome2 python-single-r1 meson
 
 DESCRIPTION="Music management for Gnome"
 HOMEPAGE="https://wiki.gnome.org/Apps/Music"
@@ -20,6 +20,7 @@ COMMON_DEPEND="
 	${PYTHON_DEPS}
 	>=app-misc/tracker-1.99.1[introspection(+)]
 	>=dev-python/pygobject-3.21.1:3[cairo,${PYTHON_USEDEP}]
+	>=dev-python/pycairo-1.14.0
 	>=dev-libs/glib-2.28:2
 	>=dev-libs/gobject-introspection-1.35.9:=
 	>=media-libs/grilo-0.3.4:0.3[introspection]
@@ -54,7 +55,12 @@ src_prepare() {
 	gnome2_src_prepare
 }
 
+src_configure() {
+	meson_src_configure
+}
+
 src_install() {
-	gnome2_src_install
+	meson_src_install
 	python_fix_shebang "${D}"usr/bin/gnome-music
 }
+
