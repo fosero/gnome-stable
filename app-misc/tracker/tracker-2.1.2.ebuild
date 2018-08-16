@@ -1,4 +1,4 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -74,7 +74,6 @@ src_configure() {
 	# unicode-support: libunistring vs libicu
 	# I chose icu for simplicity
 	gnome2_src_configure \
-		--disable-hal \
 		--disable-static \
 		--enable-introspection \
 		--enable-miner-user-guides \
