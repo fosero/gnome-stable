@@ -1,9 +1,9 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
 GNOME2_LA_PUNT="yes"
-PYTHON_COMPAT=( python3_{4,5,6} )
+PYTHON_COMPAT=( python3_{4,5,6,7} )
 
 inherit autotools bash-completion-r1 eutils gnome2 linux-info multilib python-any-r1 vala versionator virtualx
 
@@ -12,7 +12,7 @@ HOMEPAGE="https://wiki.gnome.org/Projects/Tracker"
 
 LICENSE="GPL-2+ LGPL-2.1+"
 SLOT="0/2.0"
-IUSE="cue elibc_glibc exif ffmpeg flac gif gsf gstreamer icu iptc +iso +jpeg libav +miner-fs mp3 nautilus pdf playlist rss seccomp stemmer test +tiff upnp-av upower +vorbis +xml xmp xps"
+IUSE="cue elibc_glibc exif ffmpeg flac gif gsf gstreamer icu iptc +iso +jpeg libav +miner-fs mp3 nautilus pdf playlist raw rss seccomp stemmer test +tiff upnp-av upower +vorbis +xml xmp xps"
 
 KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~ia64 ~ppc ~ppc64 ~sparc x86"
 
@@ -26,7 +26,7 @@ REQUIRED_USE="
 # seccomp is automagic, though we want to use it whenever possible (linux)
 RDEPEND="
 	>=app-i18n/enca-1.9
-	>=app-misc/tracker-1.99.3
+	>=app-misc/tracker-2.1.0
 	>=dev-libs/glib-2.44:2
 	>=media-libs/libpng-1.2:0=
 	sys-apps/util-linux
@@ -52,6 +52,7 @@ RDEPEND="
 	mp3? ( >=media-libs/taglib-1.6 )
 	pdf? ( >=app-text/poppler-0.16[cairo,utils] )
 	playlist? ( >=dev-libs/totem-pl-parser-3 )
+	raw? ( media-libs/gexiv2 )
 	rss? ( >=net-libs/libgrss-0.7:0 )
 	stemmer? ( dev-libs/snowball-stemmer )
 	tiff? ( media-libs/tiff:0 )
@@ -115,11 +116,11 @@ src_configure() {
 		--enable-ps \
 		--enable-text \
 		--enable-tracker-writeback \
-		--enable-icu-charset-detection \
 		$(use_enable icu icu-charset-detection) \
 		$(use_enable cue libcue) \
 		$(use_enable exif libexif) \
 		$(use_enable flac libflac) \
+		$(use_enable raw gexiv2) \
 		$(use_enable gif libgif) \
 		$(use_enable gsf libgsf) \
 		$(use_enable iptc libiptcdata) \
