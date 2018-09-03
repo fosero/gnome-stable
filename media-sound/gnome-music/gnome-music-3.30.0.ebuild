@@ -26,14 +26,13 @@ COMMON_DEPEND="
 	>=media-libs/grilo-0.3.4:0.3[introspection]
 	>=media-libs/libmediaart-1.9.1:2.0[introspection]
 	>=x11-libs/gtk+-3.19.3:3[introspection]
+	>=dev-libs/libdazzle-3.28
+	net-libs/libsoup:2.4
 "
 # xdg-user-dirs-update needs to be there to create needed dirs
 # https://bugzilla.gnome.org/show_bug.cgi?id=731613
 RDEPEND="${COMMON_DEPEND}
 	app-misc/tracker
-	x11-libs/libnotify[introspection]
-	dev-python/dbus-python[${PYTHON_USEDEP}]
-	dev-python/requests[${PYTHON_USEDEP}]
 	media-libs/gstreamer:1.0[introspection]
 	media-libs/gst-plugins-base:1.0[introspection]
 	media-plugins/gst-plugins-meta:1.0
