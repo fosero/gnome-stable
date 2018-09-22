@@ -1,39 +1,42 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
 GNOME2_LA_PUNT="yes"
-GNOME2_EAUTORECONF="yes"
-PYTHON_COMPAT=( python{3_4,3_5,3_6} )
+PYTHON_COMPAT=( python{3_4,3_5,3_6,3_7} )
 
-inherit gnome2 meson multilib pax-utils python-r1 systemd
+inherit autotools gnome2 multilib pax-utils python-r1 systemd meson ninja-utils
+if [[ ${PV} = 9999 ]]; then
+	inherit gnome2-live
+fi
 
 DESCRIPTION="Provides core UI functions for the GNOME 3 desktop"
 HOMEPAGE="https://wiki.gnome.org/Projects/GnomeShell"
 
 LICENSE="GPL-2+ LGPL-2+"
 SLOT="0"
-IUSE="+bluetooth +browser-extension +ibus nsplugin"
-#IUSE="+bluetooth +browser-extension +ibus +networkmanager nsplugin -openrc-force"
+IUSE="+bluetooth +networkmanager nsplugin +ibus -openrc-force systemd"
 REQUIRED_USE="${PYTHON_REQUIRED_USE}"
 
-KEYWORDS="~amd64 ~ia64 ~x86"
+KEYWORDS="~alpha ~amd64 ~arm ~ia64 ~ppc ~ppc64 ~sparc ~x86"
 
 # libXfixes-5.0 needed for pointer barriers
 # FIXME:
 #  * gstreamer support is currently automagic
+#  * having sassc breaks build...
 COMMON_DEPEND="
+	>=dev-util/meson-0.43.0
 	>=app-accessibility/at-spi2-atk-2.5.3
 	>=dev-libs/atk-2[introspection]
 	>=app-crypt/gcr-3.7.5[introspection]
-	>=dev-libs/glib-2.45.3:2[dbus]
-	>=dev-libs/gjs-1.47.0
+	>=dev-libs/glib-2.53.4:2[dbus]
+	>=dev-libs/gjs-1.52.0
 	>=dev-libs/gobject-introspection-1.49.1:=
 	dev-libs/libical:=
 	>=x11-libs/gtk+-3.15.0:3[introspection]
 	>=dev-libs/libcroco-0.6.8:0.6
 	>=gnome-base/gnome-desktop-3.7.90:3=[introspection]
-	>=gnome-base/gsettings-desktop-schemas-3.21.3
+	>=gnome-base/gsettings-desktop-schemas-3.27.90
 	>=gnome-extra/evolution-data-server-3.17.2:=
 	>=media-libs/gstreamer-0.11.92:1.0
 	>=net-im/telepathy-logger-0.2.4[introspection]
@@ -41,8 +44,9 @@ COMMON_DEPEND="
 	>=sys-auth/polkit-0.100[introspection]
 	>=x11-libs/libXfixes-5.0
 	x11-libs/libXtst
-	>=x11-wm/mutter-3.26:0/1[introspection]
+	>=x11-wm/mutter-3.30.0[introspection]
 	>=x11-libs/startup-notification-0.11
+	dev-lang/sassc
 
 	${PYTHON_DEPS}
 	dev-python/pygobject:3[${PYTHON_USEDEP}]
@@ -58,10 +62,10 @@ COMMON_DEPEND="
 
 	x11-apps/mesa-progs
 
-	bluetooth? ( >=net-wireless/gnome-bluetooth-3.9[introspection] )
-	app-crypt/libsecret
-	>=gnome-extra/nm-applet-0.9.8
-	>=net-misc/networkmanager-0.9.8:=[introspection]
+	>=net-wireless/gnome-bluetooth-3.20[introspection]
+	networkmanager? (
+		>=app-crypt/libsecret-0.14
+		>=net-misc/networkmanager-1.10.4:=[introspection] )
 	nsplugin? ( >=dev-libs/json-glib-0.13.2 )
 "
 # Runtime-only deps are probably incomplete and approximate.
@@ -87,73 +91,69 @@ RDEPEND="${COMMON_DEPEND}
 	>=gnome-base/gnome-session-2.91.91
 	>=gnome-base/gnome-settings-daemon-3.8.3
 
-	>=sys-apps/systemd-31
+	!openrc-force? ( >=sys-apps/systemd-31 )
 
 	x11-misc/xdg-utils
 
 	media-fonts/dejavu
 	>=x11-themes/adwaita-icon-theme-3.19.90
 
-	net-misc/mobile-broadband-provider-info
-	sys-libs/timezone-data
+	networkmanager? (
+		net-misc/mobile-broadband-provider-info
+		sys-libs/timezone-data )
 	ibus? ( >=app-i18n/ibus-1.4.99[dconf(+),gtk,introspection] )
 "
 # avoid circular dependency, see bug #546134
 PDEPEND="
 	>=gnome-base/gdm-3.5[introspection]
-	>=gnome-base/gnome-control-center-3.8.3[bluetooth(+)?,networkmanager]
-	browser-extension? ( gnome-extra/chrome-gnome-shell )
+	>=gnome-base/gnome-control-center-3.8.3[bluetooth(+)?,networkmanager(+)?]
 "
 DEPEND="${COMMON_DEPEND}
-	>=dev-util/meson-0.42
 	dev-libs/libxslt
-	>=dev-util/gdbus-codegen-2.45.3
 	>=dev-util/gtk-doc-am-1.17
-	sys-devel/autoconf-archive
+	gnome-base/gnome-common
 	>=sys-devel/gettext-0.19.6
 	virtual/pkgconfig
 "
+# libmozjs.so is picked up from /usr/lib while compiling, so block at build-time
+# https://bugs.gentoo.org/show_bug.cgi?id=360413
+
+MAKEOPTS="-j1"
 
 src_prepare() {
+	# Change favorites defaults, bug #479918
+	eapply "${FILESDIR}"/${PN}-3.22.0-defaults.patch
 
-	default
-
+	gnome2_src_prepare
 }
 
 src_configure() {
-# FIXME: meson eclass doesn't like this
-#		-Denable-networkmanager=$(usex networkmanager true false)
-#		-Denable-systemd=$(usex !openrc-force true false)
-
 	local emesonargs=(
-		-Denable-networkmanager=yes
-		-Denable-systemd=yes
-		-Denable-browser-plugin=$(usex nsplugin true false)
-		-Denable-man=true
-		-Denable-documentation=false
+		-Dsystemd=$(usex systemd true false)
+		-Dnetworkmanager=$(usex networkmanager true false)
+		-DBROWSER_PLUGIN_DIR="${EPREFIX}"/usr/$(get_libdir)/nsbrowser/plugins
 	)
 	meson_src_configure
+}
 
+src_compile() {
+	cd "${BUILD_DIR}"
+	meson_src_compile
+}
+
+multilib_src_compile() {
+	cd "${BUILD_DIR}"
+	meson_src_compile
 }
 
 src_install() {
-	meson_src_install
-	python_replicate_script "${ED}/usr/bin/gnome-shell-extension-tool"
-	python_replicate_script "${ED}/usr/bin/gnome-shell-perf-tool"
+	cd "${BUILD_DIR}"
+	DESTDIR="${D}" eninja install
+}
 
-	# Required for gnome-shell on hardened/PaX, bug #398941
-	# Future-proof for >=spidermonkey-1.8.7 following polkit's example
-	if has_version '<dev-lang/spidermonkey-1.8.7'; then
-		pax-mark mr "${ED}usr/bin/gnome-shell"{,-extension-prefs}
-	elif has_version '>=dev-lang/spidermonkey-1.8.7[jit]'; then
-		pax-mark m "${ED}usr/bin/gnome-shell"{,-extension-prefs}
-	# Required for gnome-shell on hardened/PaX #457146 and #457194
-	# PaX EMUTRAMP need to be on
-	elif has_version '>=dev-libs/libffi-3.0.13[pax_kernel]'; then
-		pax-mark E "${ED}usr/bin/gnome-shell"{,-extension-prefs}
-	else
-		pax-mark m "${ED}usr/bin/gnome-shell"{,-extension-prefs}
-	fi
+multilib_src_install() {
+	cd "${BUILD_DIR}"
+	DESTDIR="${D}" eninja install
 }
 
 pkg_postinst() {
@@ -167,10 +167,16 @@ pkg_postinst() {
 		ewarn "apps.gnome-shell.recorder/pipeline to what you want to use."
 	fi
 
+	if has_version "<x11-drivers/ati-drivers-12"; then
+		ewarn "GNOME Shell has been reported to show graphical corruption under"
+		ewarn "x11-drivers/ati-drivers-11.*; you may want to switch to open-source"
+		ewarn "drivers."
+	fi
+
 	if ! has_version "media-libs/mesa[llvm]"; then
 		elog "llvmpipe is used as fallback when no 3D acceleration"
 		elog "is available. You will need to enable llvm USE for"
-		elog "media-libs/mesa if you do not have hardware 3D setup."
+		elog "media-libs/mesa."
 	fi
 
 	# https://bugs.gentoo.org/show_bug.cgi?id=563084
@@ -185,4 +191,11 @@ pkg_postinst() {
 		ewarn "https://wiki.gentoo.org/wiki/Systemd"
 	fi
 
+	if use openrc-force; then
+		ewarn "You are enabling 'openrc-force' USE flag to skip systemd requirement,"
+		ewarn "this can lead to unexpected problems and is not supported neither by"
+		ewarn "upstream neither by Gnome Gentoo maintainers. If you suffer any problem,"
+		ewarn "you will need to disable this USE flag system wide and retest before"
+		ewarn "opening any bug report."
+	fi
 }
