@@ -1,14 +1,17 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
-inherit gnome2 virtualx
+inherit autotools gnome2 virtualx
+if [[ ${PV} = 9999 ]]; then
+	inherit gnome2-live
+fi
 
 DESCRIPTION="GNOME 3 compositing window manager based on Clutter"
 HOMEPAGE="https://git.gnome.org/browse/mutter/"
 
 LICENSE="GPL-2+"
-SLOT="0/1"
+SLOT="0"
 
 IUSE="debug gles2 input_devices_wacom +introspection test udev wayland"
 
@@ -16,6 +19,7 @@ KEYWORDS="~alpha ~amd64 ~arm ~ia64 ~ppc ~ppc64 ~sparc ~x86"
 
 # libXi-1.7.4 or newer needed per:
 # https://bugzilla.gnome.org/show_bug.cgi?id=738944
+# TODO: make wayland? ( optional, update patch
 COMMON_DEPEND="
 	>=dev-libs/atk-2.5.3
 	>=x11-libs/gdk-pixbuf-2:2
@@ -23,7 +27,7 @@ COMMON_DEPEND="
 	>=x11-libs/pango-1.30[introspection?]
 	>=x11-libs/cairo-1.14[X]
 	>=x11-libs/gtk+-3.19.8:3[X,introspection?]
-	>=dev-libs/glib-2.53.2:2[dbus]
+	>=dev-libs/glib-2.53.4:2[dbus]
 	>=media-libs/libcanberra-0.26[gtk3]
 	>=x11-libs/startup-notification-0.7
 	>=x11-libs/libXcomposite-0.2
@@ -54,19 +58,16 @@ COMMON_DEPEND="
 	gles2? ( media-libs/mesa[gles2] )
 	input_devices_wacom? ( >=dev-libs/libwacom-0.13 )
 	introspection? ( >=dev-libs/gobject-introspection-1.42:= )
-	udev? ( >=dev-libs/libgudev-232:= )
-	wayland? (
-		>=dev-libs/libinput-1.4
-		>=dev-libs/wayland-1.13
-		>=dev-libs/wayland-protocols-1.9
-		>=media-libs/mesa-10.3[egl,gbm,wayland]
-		sys-apps/systemd
-		virtual/libgudev:=
-		>=virtual/libudev-136:=
-		x11-base/xorg-server[wayland]
-		x11-libs/libdrm:=
-	)
+	>=dev-libs/libinput-1.4
+	>=dev-libs/wayland-1.6.90
+	>=dev-libs/wayland-protocols-1.16
+	>=media-libs/mesa-10.3[egl,gbm,wayland]
+	sys-apps/systemd:=
+	>=virtual/libudev-232:=
+	x11-base/xorg-server[wayland]
+	x11-libs/libdrm:=
 "
+
 DEPEND="${COMMON_DEPEND}
 	>=sys-devel/gettext-0.19.6
 	virtual/pkgconfig
@@ -74,13 +75,15 @@ DEPEND="${COMMON_DEPEND}
 	x11-proto/xineramaproto
 	x11-proto/xproto
 	test? ( app-text/docbook-xml-dtd:4.5 )
-	wayland? ( >=sys-kernel/linux-headers-4.4 )
+	>=sys-kernel/linux-headers-4.4
 "
 RDEPEND="${COMMON_DEPEND}
 	!x11-misc/expocity
 "
 
 src_prepare() {
+	eautoreconf
+
 	# Disable building of noinst_PROGRAM for tests
 	if ! use test; then
 		sed -e '/^noinst_PROGRAMS/d' \
@@ -107,8 +110,6 @@ src_configure() {
 	# GLX is forced by mutter but optional in clutter
 	# xlib-egl-platform required by mutter x11 backend
 	# native backend without wayland is useless
-
-	# TODO: need pipewire for remote desktop
 	gnome2_src_configure \
 		--disable-static \
 		--enable-compile-warnings=minimum \
@@ -135,3 +136,8 @@ src_configure() {
 src_test() {
 	virtx emake check
 }
+
+#pkg_postinst() {
+#	elog "Creating missing symlinks"
+#	ln /usr/"$(get_libdir)"/mutter/*.so /usr/"$(get_libdir)"/ || die
+#}
