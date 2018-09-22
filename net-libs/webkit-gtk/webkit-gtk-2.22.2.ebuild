@@ -50,7 +50,7 @@ RDEPEND="
 	>=media-libs/freetype-2.4.2:2
 	>=media-libs/harfbuzz-1.3.3:=[icu(+)]
 	>=media-libs/libpng-1.4:0=
-	>=app-arch/woff2-1.0.2
+	>=media-libs/woff2-1.0.2
 	media-libs/libwebp:=
 	>=dev-libs/libgcrypt-1.7:0=
 	>=net-libs/libsoup-2.42:2.4[introspection?]
@@ -65,9 +65,9 @@ RDEPEND="
 	gles2? ( media-libs/mesa[gles2] )
 	gnome-keyring? ( app-crypt/libsecret )
 	gstreamer? (
-		>=media-libs/gstreamer-1.2.3:1.0
-		>=media-libs/gst-plugins-base-1.2.3:1.0
-		>=media-libs/gst-plugins-bad-1.8:1.0[opengl?] )
+		>=media-libs/gstreamer-1.8.3:1.0
+		>=media-libs/gst-plugins-base-1.8.3:1.0
+		>=media-libs/gst-plugins-bad-1.8.3:1.0[opengl?] )
 	introspection? ( >=dev-libs/gobject-introspection-1.32.0:= )
 	libnotify? ( x11-libs/libnotify )
 	nsplugin? ( >=x11-libs/gtk+-2.24.10:2 )
@@ -223,6 +223,7 @@ src_configure() {
 		-DCMAKE_BUILD_TYPE=Release
 		-DPORT=GTK
 		-DUSE_WOFF2=ON
+		-DUSE_GSTREAMER_PLAYBIN3=ON
 		${ruby_interpreter}
 	)
 
