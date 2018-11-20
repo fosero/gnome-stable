@@ -44,7 +44,7 @@ COMMON_DEPEND="
 	>=sys-auth/polkit-0.100[introspection]
 	>=x11-libs/libXfixes-5.0
 	x11-libs/libXtst
-	>=x11-wm/mutter-3.30.0[introspection]
+	>=x11-wm/mutter-3.30.1[introspection]
 	>=x11-libs/startup-notification-0.11
 	dev-lang/sassc
 
@@ -56,7 +56,6 @@ COMMON_DEPEND="
 	media-libs/libcanberra[gtk3]
 	media-libs/mesa
 	>=media-sound/pulseaudio-2
-	>=net-libs/libsoup-2.40:2.4[introspection]
 	x11-libs/libX11
 	x11-libs/gdk-pixbuf:2[introspection]
 
