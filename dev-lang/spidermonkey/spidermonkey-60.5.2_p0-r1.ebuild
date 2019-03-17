@@ -1,4 +1,4 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -8,10 +8,12 @@ inherit autotools toolchain-funcs pax-utils mozcoreconf-v5
 MY_PN="mozjs"
 MY_P="${MY_PN}-${PV/_rc/.rc}"
 MY_P="${MY_P/_pre/pre}"
+MY_P="${MY_P%_p[0-9]*}"
 DESCRIPTION="Stand-alone JavaScript C++ library"
 HOMEPAGE="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey"
-SRC_URI="http://ftp.gnome.org/pub/gnome/teams/releng/tarballs-needing-help/mozjs/mozjs-${PV}.tar.bz2
-	https://dev.gentoo.org/~axs/distfiles/${PN}-60.0-patches-02.tar.xz"
+#SRC_URI="https://archive.mozilla.org/pub/spidermonkey/prereleases/60/pre3/${MY_P}.tar.bz2
+SRC_URI="https://dev.gentoo.org/~axs/distfiles/${MY_P}.tar.bz2
+	https://dev.gentoo.org/~axs/distfiles/${PN}-60.0-patches-03.tar.xz"
 
 LICENSE="NPL-1.1"
 SLOT="60"
@@ -28,7 +30,7 @@ RDEPEND=">=dev-libs/nspr-4.13.1
 	virtual/libffi
 	sys-libs/readline:0=
 	>=sys-libs/zlib-1.2.3
-	system-icu? ( >=dev-libs/icu-58.1:= )"
+	system-icu? ( >=dev-libs/icu-59.1:= )"
 DEPEND="${RDEPEND}"
 
 pkg_setup(){
@@ -139,4 +141,3 @@ src_install() {
 	# They're used by the tests and in a few other places
 	find "${D}" -iname '*.a' -o -iname '*.ajs' -delete || die
 }
-
