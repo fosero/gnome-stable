@@ -8,7 +8,7 @@ inherit gnome.org gnome2-utils python-any-r1 meson udev virtualx xdg
 
 DESCRIPTION="Gnome Settings Daemon"
 HOMEPAGE="https://git.gnome.org/browse/gnome-settings-daemon"
-SRC_URI+=" https://dev.gentoo.org/~leio/distfiles/${P}-patchset.tar.xz"
+# SRC_URI+=" https://dev.gentoo.org/~leio/distfiles/${P}-patchset.tar.xz"
 
 LICENSE="GPL-2+ LGPL-2+"
 SLOT="0"
