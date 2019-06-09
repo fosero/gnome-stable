@@ -2,7 +2,7 @@
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
-PYTHON_COMPAT=( python{3_4,3_5,3_6} )
+PYTHON_COMPAT=( python{3_4,3_5,3_6,3_7} )
 
 inherit gnome2 python-single-r1 meson
 
@@ -24,6 +24,7 @@ COMMON_DEPEND="
 	>=dev-libs/glib-2.28:2
 	>=dev-libs/gobject-introspection-1.35.9:=
 	>=media-libs/grilo-0.3.4:0.3[introspection]
+	>=media-plugins/grilo-plugins-0.3.8:0.3[lua]
 	>=media-libs/libmediaart-1.9.1:2.0[introspection]
 	>=x11-libs/gtk+-3.19.3:3[introspection]
 	>=dev-libs/libdazzle-3.28
