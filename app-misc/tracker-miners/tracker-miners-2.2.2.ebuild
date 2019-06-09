@@ -3,15 +3,17 @@
 
 EAPI=6
 GNOME2_LA_PUNT="yes"
-PYTHON_COMPAT=( python3_{4,5,6,7} )
+PYTHON_COMPAT=( python3_{5,6,7} )
 
-inherit autotools bash-completion-r1 eutils gnome2 linux-info multilib python-any-r1 vala versionator virtualx
+PV=${PV/_/-}
+
+inherit bash-completion-r1 eutils gnome2 linux-info multilib python-any-r1 vala versionator meson
 
 DESCRIPTION="Miners for tracker"
 HOMEPAGE="https://wiki.gnome.org/Projects/Tracker"
 
 LICENSE="GPL-2+ LGPL-2.1+"
-SLOT="0/2.0"
+SLOT="0/2.2"
 IUSE="cue elibc_glibc exif ffmpeg flac gif gsf gstreamer icu iptc +iso +jpeg libav +miner-fs mp3 nautilus pdf playlist raw rss seccomp stemmer test +tiff upnp-av upower +vorbis +xml xmp xps"
 
 KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~ia64 ~ppc ~ppc64 ~sparc x86"
@@ -88,63 +90,12 @@ src_prepare() {
 }
 
 src_configure() {
-	local myconf=""
 
-	if use gstreamer ; then
-		myconf="${myconf} --enable-generic-media-extractor=gstreamer"
-		if use upnp-av; then
-			myconf="${myconf} --with-gstreamer-backend=gupnp-dlna"
-		else
-			myconf="${myconf} --with-gstreamer-backend=discoverer"
-		fi
-	elif use ffmpeg ; then
-		myconf="${myconf} --enable-generic-media-extractor=libav"
-	else
-		myconf="${myconf} --enable-generic-media-extractor=external"
-	fi
+        local emesonargs=(
+		-Dminer_rss=false
+        )
 
-	gnome2_src_configure \
-		--disable-hal \
-		--disable-static \
-		--enable-abiword \
-		--enable-dvi \
-		--enable-enca \
-		--enable-guarantee-metadata \
-		--enable-icon \
-		--enable-libpng \
-		--enable-miner-apps \
-		--enable-ps \
-		--enable-text \
-		--enable-tracker-writeback \
-		$(use_enable icu icu-charset-detection) \
-		$(use_enable cue libcue) \
-		$(use_enable exif libexif) \
-		$(use_enable flac libflac) \
-		$(use_enable raw gexiv2) \
-		$(use_enable gif libgif) \
-		$(use_enable gsf libgsf) \
-		$(use_enable iptc libiptcdata) \
-		$(use_enable iso libosinfo) \
-		$(use_enable jpeg libjpeg) \
-		$(use_enable upower upower) \
-		$(use_enable miner-fs) \
-		$(use_enable mp3 taglib) \
-		$(use_enable mp3) \
-		$(use_enable pdf poppler) \
-		$(use_enable playlist) \
-		$(use_enable rss miner-rss) \
-		$(use_enable stemmer libstemmer) \
-		$(use_enable test functional-tests) \
-		$(use_enable test unit-tests) \
-		$(use_enable tiff libtiff) \
-		$(use_enable vorbis libvorbis) \
-		$(use_enable xml libxml2) \
-		$(use_enable xmp exempi) \
-		$(use_enable xps libgxps) \
-		${myconf}
+       meson_src_configure
+
 }
 
-src_test() {
-	# G_MESSAGES_DEBUG, upstream bug #699401#c1
-	virtx emake check TESTS_ENVIRONMENT="dbus-run-session" G_MESSAGES_DEBUG="all"
-}
