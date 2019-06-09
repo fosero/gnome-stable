@@ -1,15 +1,15 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
-inherit gnome2 readme.gentoo-r1
+inherit gnome.org readme.gentoo-r1 meson xdg
 
 DESCRIPTION="JavaScript extensions for GNOME Shell"
 HOMEPAGE="https://wiki.gnome.org/Projects/GnomeShell/Extensions"
 
-LICENSE="GPL-2"
+LICENSE="GPL-2+"
 SLOT="0"
-IUSE="examples"
+IUSE="examples test"
 KEYWORDS="~amd64 ~x86"
 
 COMMON_DEPEND="
@@ -22,21 +22,23 @@ RDEPEND="${COMMON_DEPEND}
 	dev-libs/gobject-introspection:=
 	dev-libs/atk[introspection]
 	gnome-base/gnome-menus:3[introspection]
-	>=gnome-base/gnome-shell-3.14.2
+	>=gnome-base/gnome-shell-3.30
 	media-libs/clutter:1.0[introspection]
 	net-libs/telepathy-glib[introspection]
 	x11-libs/gdk-pixbuf:2[introspection]
 	x11-libs/gtk+:3[introspection]
 	x11-libs/pango[introspection]
 	x11-themes/adwaita-icon-theme
-	x11-wm/mutter[introspection]
+	>=x11-wm/mutter-3.30[introspection]
 "
 DEPEND="${COMMON_DEPEND}
 	dev-lang/sassc
-	>=sys-devel/gettext-0.19.6
+	>=sys-devel/gettext-0.19.8
 	virtual/pkgconfig
+	test? ( dev-lang/spidermonkey:52 )
 "
-# eautoreconf needs gnome-base/gnome-common
+
+RESTRICT="!test? ( test )"
 
 DISABLE_AUTOFORMATTING="yes"
 DOC_CONTENTS="Installed extensions installed are initially disabled by default.
@@ -45,29 +47,31 @@ To change the system default and enable some extensions, you can use
 
 Alternatively, to enable/disable extensions on a per-user basis,
 you can use the https://extensions.gnome.org/ web interface, the
-gnome-extra/gnome-tweak-tool GUI, or modify the org.gnome.shell
+gnome-extra/gnome-tweaks GUI, or modify the org.gnome.shell
 enabled-extensions gsettings key from the command line or a script."
 
 src_configure() {
-	gnome2_src_configure --enable-extensions=all
+	meson_src_configure \
+		-Dextension_set=all \
+		-Dclassic_mode=true
 }
 
 src_install() {
-	gnome2_src_install
+	meson_src_install
 
-	local example="example@gnome-shell-extensions.gcampax.github.com"
-	if use examples; then
-		mv "${ED}usr/share/gnome-shell/extensions/${example}" \
-			"${ED}usr/share/doc/${PF}/" || die
-	else
-		rm -r "${ED}usr/share/gnome-shell/extensions/${example}" || die
-	fi
+#	local example="example@gnome-shell-extensions.gcampax.github.com"
+#	if use examples; then
+#		mv "${ED}usr/share/gnome-shell/extensions/${example}" \
+#			"${ED}usr/share/doc/${PF}/" || die
+#	else
+#		rm -r "${ED}usr/share/gnome-shell/extensions/${example}" || die
+#	fi
 
 	readme.gentoo_create_doc
 }
 
 pkg_postinst() {
-	gnome2_pkg_postinst
+	xdg_pkg_postinst
 
 	ebegin "Updating list of installed extensions"
 	eselect gnome-shell-extensions update
