@@ -37,8 +37,8 @@ LIBGIT_DEPS="
 "
 # TODO: Handle llvm slots via llvm.eclass; see plugins/clang/meson.build
 RDEPEND="
-	>=dev-libs/libdazzle-3.31.90[introspection,vala?]
-	>=dev-libs/glib-2.59.0:2
+	>=dev-libs/libdazzle-3.33.90[introspection,vala?]
+	>=dev-libs/glib-2.61.2:2
 	>=x11-libs/gtk+-3.24.0:3[introspection]
 	>=x11-libs/gtksourceview-4.0.0:4[introspection]
 	>=dev-libs/json-glib-1.2.0
@@ -122,7 +122,7 @@ pkg_setup() {
 }
 
 src_prepare() {
-	use vala && vala_src_prepare
+	vala_src_prepare
 	xdg_src_prepare
 }
 
