@@ -1,0 +1,44 @@
+From 9644c30eee9723c57d10d97b11446224afc708fc Mon Sep 17 00:00:00 2001
+From: Georges Basile Stavracas Neto <georges.stavracas@gmail.com>
+Date: Sat, 14 Sep 2019 11:14:01 -0300
+Subject: [PATCH] date-time-utils: Fix weekday calculation
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+GNOME Calendar needs to deal with two different
+weekday ranges:
+
+ 1. Sunday → 0 ... Saturday → 6
+ 2. Monday → 1 ... Sunday → 7 (used by GDateTime)
+
+When converting (2) into (1), the correct calculation
+is `weekday % 7`.
+
+However, gcal_date_time_get_start_of_week() was doing
+`weekday - 1` instead.
+
+Fix it and do the correct calculation instead.
+
+https://gitlab.gnome.org/GNOME/gnome-calendar/issues/451
+---
+ src/utils/gcal-date-time-utils.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/utils/gcal-date-time-utils.c b/src/utils/gcal-date-time-utils.c
+index 88b6725b..45ea57a6 100644
+--- a/src/utils/gcal-date-time-utils.c
++++ b/src/utils/gcal-date-time-utils.c
+@@ -83,7 +83,7 @@ gcal_date_time_get_start_of_week (GDateTime *date)
+   g_assert (date != NULL);
+ 
+   first_weekday = get_first_weekday ();
+-  weekday = g_date_time_get_day_of_week (date) - 1;
++  weekday = g_date_time_get_day_of_week (date) % 7;
+   n_days_after_week_start = (weekday - first_weekday) % 7;
+ 
+   start_of_week = g_date_time_add_days (date, -n_days_after_week_start);
+-- 
+2.22.0
+
+
