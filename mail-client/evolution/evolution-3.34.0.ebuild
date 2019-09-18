@@ -1,11 +1,9 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
 EAPI=6
-GNOME2_LA_PUNT="yes"
 
-inherit gnome2 flag-o-matic readme.gentoo-r1 cmake-utils
+inherit cmake-utils gnome2 flag-o-matic readme.gentoo-r1
 
 DESCRIPTION="Integrated mail, addressbook and calendaring functionality"
 HOMEPAGE="https://wiki.gnome.org/Apps/Evolution"
@@ -14,24 +12,18 @@ HOMEPAGE="https://wiki.gnome.org/Apps/Evolution"
 LICENSE="|| ( LGPL-2 LGPL-3 ) CC-BY-SA-3.0 FDL-1.3+ OPENLDAP"
 SLOT="2.0"
 
-IUSE="+bogofilter crypt geolocation highlight ldap spamassassin spell ssl +weather"
+IUSE="archive +bogofilter geolocation gtk-doc highlight ldap spamassassin spell ssl +weather ytnef"
 
-KEYWORDS="~alpha ~amd64 ~arm ~ia64 ~ppc ~ppc64 ~x86 ~x86-fbsd"
-
-RESTRICT="mirror"
-
-# We need a graphical pinentry frontend to be able to ask for the GPG
-# password from inside evolution, bug 160302
-PINENTRY_DEPEND="|| ( app-crypt/pinentry[gnome-keyring] app-crypt/pinentry[gtk] app-crypt/pinentry[qt4] app-crypt/pinentry[qt5] )"
+KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~ia64 ~ppc ~ppc64 ~x86"
 
 # glade-3 support is for maintainers only per configure.ac
 # pst is not mature enough and changes API/ABI frequently
 # dconf explicitely needed for backup plugin
 # gnome-desktop support is optional with --enable-gnome-desktop
+# automagic libunity dep
 COMMON_DEPEND="
-	app-arch/gnome-autoar[gtk]
-	>=app-crypt/gcr-3.4:=
-	>=app-text/enchant-1.1.7
+	>=app-crypt/gcr-3.4:=[gtk]
+	>=app-text/enchant-1.6.0:0
 	>=dev-libs/glib-2.46:2[dbus]
 	>=dev-libs/libxml2-2.7.3:2
 	>=gnome-base/gnome-desktop-2.91.3:3=
@@ -39,24 +31,21 @@ COMMON_DEPEND="
 	>=gnome-extra/evolution-data-server-${PV}:=[gtk,weather?]
 	>=media-libs/libcanberra-0.25[gtk3]
 	>=net-libs/libsoup-2.42:2.4
-	>=net-libs/webkit-gtk-2.13.90:4
+	>=net-libs/webkit-gtk-2.16.0:4
 	>=x11-libs/cairo-1.9.15:=[glib]
 	>=x11-libs/gdk-pixbuf-2.24:2
-	>=x11-libs/gtk+-3.10:3
+	>=x11-libs/gtk+-3.22:3
 	>=x11-libs/libnotify-0.7:=
 	>=x11-misc/shared-mime-info-0.22
 
 	>=app-text/iso-codes-0.49
 	dev-libs/atk
 	gnome-base/dconf
-	dev-libs/libical:=
+	>=dev-libs/libical-3.0.5:=[glib]
 	x11-libs/libSM
 	x11-libs/libICE
 
-	crypt? (
-		>=app-crypt/gnupg-1.4
-		${PINENTRY_DEPEND}
-		x11-libs/libcryptui )
+	archive? ( >=app-arch/gnome-autoar-0.1.1[gtk] )
 	geolocation? (
 		>=media-libs/libchamplain-0.12:0.12[gtk]
 		>=media-libs/clutter-1.0.0:1.0
@@ -69,14 +58,17 @@ COMMON_DEPEND="
 		>=dev-libs/nspr-4.6.1:=
 		>=dev-libs/nss-3.11:= )
 	weather? ( >=dev-libs/libgweather-3.10:2= )
+	ytnef? ( net-mail/ytnef )
 "
 DEPEND="${COMMON_DEPEND}
-	app-text/highlight
 	app-text/docbook-xml-dtd:4.1.2
-	app-text/yelp-tools
-	>=dev-util/gtk-doc-am-1.14
+	dev-util/gdbus-codegen
+	dev-util/glib-utils
+	dev-util/itstool
+	gtk-doc? ( dev-util/gtk-doc
+		app-text/docbook-xml-dtd:4.3 )
 	>=dev-util/intltool-0.40.0
-	>=gnome-base/gnome-common-2.12
+	>=sys-devel/gettext-0.18.3
 	virtual/pkgconfig
 "
 RDEPEND="${COMMON_DEPEND}
@@ -98,27 +90,52 @@ x-scheme-handler/https=firefox.desktop
 (replace firefox.desktop with the name of the appropriate .desktop
 file from /usr/share/applications if you use a different browser)."
 
+# global scope PATCHES or DOCS array mustn't be used due to double default_src_prepare
+# call; if needed, set them after cmake-utils_src_prepare call, if that works
+
+src_prepare() {
+	# eapply "${FILESDIR}"/${PV}-gtk-doc-fix{1,2}.patch
+	cmake-utils_src_prepare
+	gnome2_src_prepare
+}
+
 src_configure() {
+	# Use NSS/NSPR only if 'ssl' is enabled.
 	local mycmakeargs=(
+		-DSYSCONF_INSTALL_DIR="${EPREFIX}"/etc
+		-DENABLE_SCHEMAS_COMPILE=OFF
+		-DENABLE_GTK_DOC=$(usex gtk-doc)
+		-DWITH_OPENLDAP=$(usex ldap)
+		-DENABLE_SMIME=$(usex ssl)
+		-DENABLE_GNOME_DESKTOP=ON
+		-DWITH_ENCHANT_VERSION=1
+		-DENABLE_CANBERRA=ON
+		-DENABLE_AUTOAR=$(usex archive)
+		-DWITH_HELP=ON
 		-DENABLE_YTNEF=OFF
+		-DWITH_BOGOFILTER=$(usex bogofilter)
+		-DWITH_SPAMASSASSIN=$(usex spamassassin)
+		-DENABLE_GTKSPELL=$(usex spell)
+		-DENABLE_TEXT_HIGHLIGHT=$(usex highlight)
+		-DENABLE_WEATHER=$(usex weather)
+		-DENABLE_CONTACT_MAPS=$(usex geolocation)
+		-DENABLE_YTNEF=$(usex ytnef)
 		-DENABLE_PST_IMPORT=OFF
-		-DENABLE_GTKSPELL=$(usex spell ON OFF)
-		-DWITH_OPENLDAP=OFF
+		-DWITH_GLADE_CATALOG=OFF
 	)
+
 	cmake-utils_src_configure
 }
 
-src_install() {
-	addwrite /usr/share/evolution
-	addwrite /usr/share/glib-2.0/schemas/org.gnome.Evolution.DefaultSources.gschema.xml
-	addwrite /usr/share/glib-2.0/schemas/org.gnome.evolution-data-server.gschema.xml
-	addwrite /usr/share/glib-2.0/schemas/org.gnome.evolution-data-server.calendar.gschema.xml
-	addwrite /usr/share/glib-2.0/schemas/org.gnome.evolution.eds-shell.gschema.xml
-	addwrite /usr/share/glib-2.0/schemas/org.gnome.evolution-data-server.addressbook.gschema.xml
-	addwrite /usr/share/glib-2.0/schemas/org.gnome.evolution.shell.network-config.gschema.xml
-	addwrite /usr/share/glib-2.0/schemas/
-	addwrite /usr/share/icons/hicolor/
+src_compile() {
+	cmake-utils_src_compile
+}
 
+src_test() {
+	cmake-utils_src_test
+}
+
+src_install() {
 	cmake-utils_src_install
 
 	# Problems with prelink:
