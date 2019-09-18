@@ -1,8 +1,7 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
-GNOME2_LA_PUNT="yes"
 
 inherit cmake-utils gnome2
 
@@ -11,22 +10,23 @@ HOMEPAGE="https://wiki.gnome.org/Apps/Evolution"
 
 LICENSE="LGPL-2.1"
 SLOT="0"
-KEYWORDS="amd64 x86"
+KEYWORDS="~amd64 ~x86"
 IUSE="test"
 
 RDEPEND="
-	dev-db/sqlite:3=
+	dev-db/sqlite:3
 	>=dev-libs/glib-2.46:2
 	dev-libs/libical:0=
 	>=dev-libs/libmspack-0.4
-	>=dev-libs/libxml2-2
-	>=gnome-extra/evolution-data-server-3.24.7:0=
+	dev-libs/libxml2:2
+	>=gnome-extra/evolution-data-server-${PV}:0=
 	>=mail-client/evolution-${PV}:2.0
-	>=net-libs/libsoup-2.42:2.4
+	>=net-libs/libsoup-2.58:2.4
 	>=x11-libs/gtk+-3.10:3
 "
 DEPEND="${RDEPEND}
 	dev-util/gdbus-codegen
+	dev-util/glib-utils
 	>=dev-util/intltool-0.35.5
 	>=sys-devel/gettext-0.18.3
 	virtual/pkgconfig
@@ -34,10 +34,13 @@ DEPEND="${RDEPEND}
 "
 
 # Unittests fail to find libevolution-ews.so
-RESTRICT="test"
+RESTRICT="test !test? ( test )"
 
+# global scope PATCHES or DOCS array mustn't be used due to double default_src_prepare
+# call; if needed, set them after cmake-utils_src_prepare call, if that works
 src_prepare() {
-	gnome2_src_prepare # default from inherit order, but be explicit; needed for xdg_src_prepare, env_reset and co
+	cmake-utils_src_prepare
+	gnome2_src_prepare
 }
 
 src_configure() {
