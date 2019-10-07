@@ -28,7 +28,3 @@ DEPEND="${RDEPEND}
 	sys-devel/gettext
 	virtual/pkgconfig
 "
-
-PATCHES=(
-	"${FILESDIR}/${P}-fix_weekdays.patch"
-)
