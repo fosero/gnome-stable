@@ -18,7 +18,7 @@ RDEPEND="python? (
 		dev-lang/python
 		dev-python/dbus-python
 		dev-python/pylint
-		dev-python/pep8 )
+		|| ( dev-python/pep8 dev-python/flake8 ) )
 "
 DEPEND="${RDEPEND}"
 
