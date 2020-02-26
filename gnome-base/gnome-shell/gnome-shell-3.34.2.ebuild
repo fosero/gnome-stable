@@ -4,7 +4,7 @@
 EAPI=7
 PYTHON_COMPAT=( python3_{5,6,7} )
 
-inherit gnome.org gnome2-utils meson pax-utils python-single-r1 virtualx xdg
+inherit gnome.org gnome2-utils meson pax-utils python-r1 virtualx xdg
 
 DESCRIPTION="Provides core UI functions for the GNOME 3 desktop"
 HOMEPAGE="https://wiki.gnome.org/Projects/GnomeShell"
