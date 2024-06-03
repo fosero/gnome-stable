@@ -1,19 +1,18 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
+
 inherit gnome.org gnome2-utils meson xdg
 
 DESCRIPTION="Collection of GSettings schemas for GNOME desktop"
-HOMEPAGE="https://git.gnome.org/browse/gsettings-desktop-schemas"
+HOMEPAGE="https://gitlab.gnome.org/GNOME/gsettings-desktop-schemas"
 
 LICENSE="LGPL-2.1+"
 SLOT="0"
 IUSE="+introspection"
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~amd64-fbsd ~x86-fbsd ~amd64-linux ~x86-linux ~x64-macos ~sparc-solaris ~x86-solaris"
+KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~loong ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86 ~amd64-linux ~x86-linux ~x64-macos"
 
-DEPEND="!<gnome-base/gdm-3.8"
-RDEPEND="${DEPEND}"
 BDEPEND="
 	introspection? ( >=dev-libs/gobject-introspection-1.54:= )
 	dev-util/glib-utils
@@ -23,11 +22,14 @@ BDEPEND="
 
 PATCHES=(
 	# Revert change to 'Source Code Pro 10' and 'Cantarell 11' fonts back to generic sans and monospace aliases
-	"${FILESDIR}"/${PV}-default-fonts.patch
+	"${FILESDIR}"/3.32.0-default-fonts.patch
 )
 
 src_configure() {
-	meson_src_configure $(meson_use introspection)
+	local emesonargs=(
+		$(meson_use introspection)
+	)
+	meson_src_configure
 }
 
 pkg_postinst() {
