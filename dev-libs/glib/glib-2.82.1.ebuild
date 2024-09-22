@@ -3,7 +3,7 @@
 
 EAPI=8
 PYTHON_REQ_USE="xml(+)"
-PYTHON_COMPAT=( python3_{10..12} )
+PYTHON_COMPAT=( python3_{10..13} )
 
 inherit gnome.org gnome2-utils linux-info meson-multilib multilib python-any-r1 toolchain-funcs xdg
 
@@ -12,11 +12,9 @@ HOMEPAGE="https://www.gtk.org/"
 
 LICENSE="LGPL-2.1+"
 SLOT="2"
-IUSE="dbus debug +elf doc +mime selinux static-libs sysprof systemtap test utils xattr"
+KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~sparc ~x86 ~amd64-linux ~x86-linux ~arm64-macos ~ppc-macos ~x64-macos ~x64-solaris"
+IUSE="dbus debug +elf doc +introspection +mime selinux static-libs sysprof systemtap test utils xattr"
 RESTRICT="!test? ( test )"
-#REQUIRED_USE="gtk-doc? ( test )" # Bug #777636
-
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86 ~amd64-linux ~x86-linux ~arm64-macos ~ppc-macos ~x64-macos ~x64-solaris"
 
 # * elfutils (via libelf) does not build on Windows. gresources are not embedded
 # within ELF binaries on that platform anyway and inspecting ELF binaries from
@@ -28,12 +26,14 @@ KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~loong ~m68k ~mips ~ppc ~ppc64 ~
 # them or just put the (build) deps in that rare consumer instead of recursive
 # RDEPEND here (due to lack of recursive DEPEND).
 RDEPEND="
+	!<dev-libs/gobject-introspection-1.80.1
 	!<dev-util/gdbus-codegen-${PV}
 	>=virtual/libiconv-0-r1[${MULTILIB_USEDEP}]
 	>=dev-libs/libpcre2-10.32:0=[${MULTILIB_USEDEP},unicode(+),static-libs?]
 	>=dev-libs/libffi-3.0.13-r1:=[${MULTILIB_USEDEP}]
 	>=sys-libs/zlib-1.2.8-r1[${MULTILIB_USEDEP}]
 	>=virtual/libintl-0-r2[${MULTILIB_USEDEP}]
+	introspection? ( >=dev-libs/gobject-introspection-1.80.1 )
 	kernel_linux? ( >=sys-apps/util-linux-2.23[${MULTILIB_USEDEP}] )
 	selinux? ( >=sys-libs/libselinux-2.2.2-r5[${MULTILIB_USEDEP}] )
 	xattr? ( !elibc_glibc? ( >=sys-apps/attr-2.4.47-r1[${MULTILIB_USEDEP}] ) )
@@ -43,7 +43,6 @@ RDEPEND="
 DEPEND="${RDEPEND}"
 # libxml2 used for optional tests that get automatically skipped
 BDEPEND="
-	!<dev-libs/gobject-introspection-1.80
 	app-text/docbook-xsl-stylesheets
 	dev-libs/libxslt
 	>=sys-devel/gettext-0.19.8
@@ -187,13 +186,14 @@ multilib_src_configure() {
 	#fi
 
 	use debug && EMESON_BUILD_TYPE=debug
+
 	local emesonargs=(
 		-Ddefault_library=$(usex static-libs both shared)
 		-Druntime_dir="${EPREFIX}"/run
 		$(meson_feature selinux)
 		$(meson_use xattr)
 		-Dlibmount=enabled # only used if host_system == 'linux'
-		-Dman-pages=true
+		-Dman-pages=enabled
 		$(meson_use systemtap dtrace)
 		$(meson_use systemtap)
 		$(meson_feature sysprof)
@@ -204,7 +204,19 @@ multilib_src_configure() {
 		-Doss_fuzz=disabled
 		$(meson_native_use_feature elf libelf)
 		-Dmultiarch=false
+		$(meson_native_use_feature introspection)
 	)
+
+	# Workaround for bug #938302
+	if use systemtap && has_version "dev-debug/systemtap[-dtrace-symlink(+)]" ; then
+		local native_file="${T}"/meson.${CHOST}.ini.local
+		cat >> ${native_file} <<-EOF || die
+		[binaries]
+		dtrace='stap-dtrace'
+		EOF
+		emesonargs+=( --native-file "${native_file}" )
+	fi
+
 	meson_src_configure
 }
 
@@ -225,7 +237,7 @@ multilib_src_test() {
 	mkdir "$G_DBUS_COOKIE_SHA1_KEYRING_DIR" || die
 	chmod 0700 "$G_DBUS_COOKIE_SHA1_KEYRING_DIR" || die
 
-	meson_src_test --timeout-multiplier 2 --no-suite flaky
+	meson_src_test --timeout-multiplier 20 --no-suite flaky
 }
 
 multilib_src_install() {
