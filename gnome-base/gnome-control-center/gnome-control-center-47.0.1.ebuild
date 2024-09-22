@@ -131,11 +131,11 @@ BDEPEND="${PYTHON_DEPS}
 "
 
 PATCHES=(
-	"${FILESDIR}"/0001-build-${PV}-optional-bluetooth-NetworkManager-Wacom.patch
-	"${FILESDIR}"/0002-build-${PV}-optional-Kerberos.patch
-	"${FILESDIR}"/0003-build-${PV}-optional-gnome-online-accounts.patch
-	"${FILESDIR}"/0004-build-${PV}-optional-cups-printer-panel.patch
-	"${FILESDIR}"/0005-build-${PV}-Fix-absolute-paths-to-use-build-config.patch
+	# "${FILESDIR}"/0001-build-${PV}-optional-bluetooth-NetworkManager-Wacom.patch
+	# "${FILESDIR}"/0002-build-46.1-optional-Kerberos.patch
+	# "${FILESDIR}"/0003-build-46.1-optional-gnome-online-accounts.patch
+	# "${FILESDIR}"/0004-build-46.1-optional-cups-printer-panel.patch
+	"${FILESDIR}"/0005-build-46.1-Fix-absolute-paths-to-use-build-config.patch
 )
 
 python_check_deps() {
@@ -165,17 +165,17 @@ src_configure() {
 	filter-lto
 
 	local emesonargs=(
-		$(meson_use bluetooth)
-		-Dcups=$(usex cups enabled disabled)
+		#$(meson_use bluetooth)
+		#-Dcups=$(usex cups enabled disabled)
 		-Ddocumentation=true # manpage
-		-Dgoa=$(usex gnome-online-accounts enabled disabled)
+		#-Dgoa=$(usex gnome-online-accounts enabled disabled)
 		$(meson_use ibus)
-		-Dkerberos=$(usex kerberos enabled disabled)
-		$(meson_use networkmanager network_manager)
+		#-Dkerberos=$(usex kerberos enabled disabled)
+		# $(meson_use networkmanager network_manager)
 		-Dprivileged_group=wheel
 		-Dsnap=false
 		$(meson_use test tests)
-		$(meson_use input_devices_wacom wacom)
+		# $(meson_use input_devices_wacom wacom)
 		#$(meson_use wayland) # doesn't do anything in 3.34 and 3.36 due to unified gudev handling code
 		# bashcompletions installed to $datadir/bash-completion/completions by v3.28.2,
 		# which is the same as $(get_bashcompdir)
