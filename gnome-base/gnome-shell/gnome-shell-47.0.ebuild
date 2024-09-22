@@ -2,7 +2,7 @@
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
-PYTHON_COMPAT=( python3_{10..12} )
+PYTHON_COMPAT=( python3_{10..13} )
 
 inherit gnome.org gnome2-utils meson optfeature python-single-r1 virtualx xdg
 
@@ -11,7 +11,8 @@ HOMEPAGE="https://wiki.gnome.org/Projects/GnomeShell https://gitlab.gnome.org/GN
 
 LICENSE="GPL-2+ LGPL-2+"
 SLOT="0"
-KEYWORDS="~amd64 ~arm ~arm64 ~ppc64 ~riscv ~x86"
+KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc64 ~riscv ~x86"
+
 IUSE="elogind gtk-doc +ibus +networkmanager pipewire systemd test"
 REQUIRED_USE="${PYTHON_REQUIRED_USE}
 	?? ( elogind systemd )"
@@ -21,14 +22,13 @@ RESTRICT="!test? ( test )"
 DEPEND="
 	>=gnome-extra/evolution-data-server-3.46.0:=
 	>=app-crypt/gcr-3.90.0:4=[introspection]
-	>=dev-libs/glib-2.80.1:2
+	>=dev-libs/glib-2.79.2:2
 	>=dev-libs/gobject-introspection-1.49.1:=
 	>=dev-libs/gjs-1.73.1[cairo]
 	>=gui-libs/gtk-4:4[introspection]
-	>=x11-wm/mutter-46.0:0/14[introspection,test?]
+	>=x11-wm/mutter-47.0:0/15[introspection,test?]
 	>=sys-auth/polkit-0.120_p20220509[introspection]
-	>=gnome-base/gsettings-desktop-schemas-46[introspection]
-	>=x11-libs/startup-notification-0.11
+	>=gnome-base/gsettings-desktop-schemas-46_beta[introspection]
 	>=app-i18n/ibus-1.5.19
 	>=gnome-base/gnome-desktop-40.0:4=
 	networkmanager? (
@@ -39,7 +39,7 @@ DEPEND="
 	pipewire? ( >=media-video/pipewire-0.3.49:= )
 	systemd? (
 		>=sys-apps/systemd-246:=
-		>=gnome-base/gnome-desktop-40:4=[systemd]
+		>=gnome-base/gnome-desktop-3.34.2:3=[systemd]
 	)
 	elogind? ( >=sys-auth/elogind-237 )
 
@@ -90,7 +90,7 @@ RDEPEND="${DEPEND}
 	net-libs/libsoup:3.0[introspection]
 	>=sys-power/upower-0.99:=[introspection]
 	gnome-base/librsvg:2[introspection]
-	>=gui-libs/libadwaita-1.5.0:1[introspection]
+	gui-libs/libadwaita:1[introspection]
 
 	>=gnome-base/gnome-session-2.91.91
 	>=gnome-base/gnome-settings-daemon-3.8.3
@@ -118,6 +118,7 @@ BDEPEND="
 	>=dev-util/gdbus-codegen-2.45.3
 	dev-util/glib-utils
 	gtk-doc? ( >=dev-util/gtk-doc-1.17
+		>=dev-util/gi-docgen-2021.1
 		app-text/docbook-xml-dtd:4.5 )
 	>=sys-devel/gettext-0.19.8
 	virtual/pkgconfig
@@ -132,7 +133,7 @@ BDEPEND="
 
 PATCHES=(
 	# Change favorites defaults, bug #479918
-	#"${FILESDIR}"/40.0-defaults.patch
+	# "${FILESDIR}"/46.4-defaults.patch
 )
 
 src_prepare() {
