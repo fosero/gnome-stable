@@ -13,8 +13,7 @@ SLOT="0"
 
 KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~x86"
 
-IUSE="+cloudproviders gnome +gstreamer gtk-doc +introspection +previewer selinux"
-REQUIRED_USE="gtk-doc? ( introspection )"
+IUSE="+cloudproviders doc gnome +gstreamer +introspection +previewer selinux"
 
 DEPEND="
 	>=dev-libs/glib-2.79.0:2
@@ -40,10 +39,6 @@ RDEPEND="${DEPEND}
 BDEPEND="
 	>=dev-util/gdbus-codegen-2.51.2
 	dev-util/glib-utils
-	gtk-doc? (
-		app-text/docbook-xml-dtd:4.1.2
-		dev-util/gi-docgen
-	)
 	>=sys-devel/gettext-0.19.8
 	virtual/pkgconfig
 	test? ( sys-apps/dbus )
@@ -77,7 +72,7 @@ src_prepare() {
 
 src_configure() {
 	local emesonargs=(
-		$(meson_use gtk-doc docs)
+		$(meson_use doc docs)
 		-Dextensions=true # image file properties, also required for -Dgstreamer=true
 		$(meson_use introspection)
 		-Dpackagekit=false
