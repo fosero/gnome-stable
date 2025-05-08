@@ -1,0 +1,2 @@
+move app-misc/tracker app-misc/tinysparql
+move app-misc/tracker-miners app-misc/localsearch
