@@ -1,23 +1,28 @@
-# Copyright 2023-2024 Gentoo Authors
+# Copyright 2023-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
-PYTHON_COMPAT=( python3_{10..12} )
+PYTHON_COMPAT=( python3_{10..13} )
 
 inherit flag-o-matic gnome.org gnome2-utils meson python-any-r1 virtualx xdg
 
 DESCRIPTION="GNOME's main interface to configure various aspects of the desktop"
 HOMEPAGE="https://gitlab.gnome.org/GNOME/gnome-control-center"
+# SRC_URI+=" https://dev.gentoo.org/~pacho/${PN}/${P}-patchset.tar.xz"
+SRC_URI+=" https://dev.gentoo.org/~mattst88/distfiles/${PN}-gentoo-logo.svg"
+SRC_URI+=" https://dev.gentoo.org/~mattst88/distfiles/${PN}-gentoo-logo-dark.svg"
 # Logo is CC-BY-SA-2.5
 LICENSE="GPL-2+ CC-BY-SA-2.5"
 SLOT="2"
-IUSE="+bluetooth +cups debug elogind +gnome-online-accounts +ibus input_devices_wacom kerberos networkmanager systemd test wayland"
-RESTRICT="!test? ( test )"
+KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~x86"
+
+IUSE="+bluetooth +cups debug elogind +gnome-online-accounts +ibus input_devices_wacom kerberos +geolocation networkmanager systemd test wayland"
 REQUIRED_USE="
 	^^ ( elogind systemd )
 " # Theoretically "?? ( elogind systemd )" is fine too, lacking some functionality at runtime,
 #   but needs testing if handled gracefully enough
-KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~x86"
+
+RESTRICT="!test? ( test )"
 
 # kerberos unfortunately means mit-krb5; build fails with heimdal
 # display panel requires colord and gnome-settings-daemon[colord]
@@ -27,25 +32,26 @@ KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~x86"
 # Second block is dependency() from subdir meson.builds, sorted by directory name occurrence order
 DEPEND="
 	gnome-online-accounts? (
-		>=net-libs/gnome-online-accounts-3.49.1:=
+		x11-libs/gtk+:3
+		>=net-libs/gnome-online-accounts-3.51.0:=
 	)
 	>=media-libs/libpulse-2.0[glib]
-	>=gui-libs/gtk-4.11.2:4[X,wayland=]
-	>=gui-libs/libadwaita-1.4_alpha:1
+	>=gui-libs/gtk-4.15.2:4[X,wayland=]
+	>=gui-libs/libadwaita-1.6_beta:1
 	>=sys-apps/accountsservice-0.6.39
 	>=x11-misc/colord-0.1.34:0=
 	>=x11-libs/gdk-pixbuf-2.23.0:2
 	>=dev-libs/glib-2.76.6:2
 	gnome-base/gnome-desktop:4=
-	>=gnome-base/gnome-settings-daemon-41.0[colord,input_devices_wacom?]
-	>=gnome-base/gsettings-desktop-schemas-46_beta
+	>=gnome-base/gnome-settings-daemon-48.0[colord,input_devices_wacom?]
+	>=gnome-base/gsettings-desktop-schemas-47.0
 	dev-libs/libxml2:2
-	>=sys-power/upower-0.99.8:=
+	>=sys-power/upower-1.90.6:=
 	>=dev-libs/libgudev-232
 	>=x11-libs/libX11-1.8
 	>=x11-libs/libXi-1.2
 	media-libs/libepoxy
-	app-crypt/gcr:4=
+	>=app-crypt/gcr-4.1.0
 	>=dev-libs/libpwquality-1.2.2
 	>=sys-auth/polkit-0.114
 	cups? (
@@ -87,7 +93,7 @@ DEPEND="
 # system-config-printer provides org.fedoraproject.Config.Printing service and interface
 # cups-pk-helper provides org.opensuse.cupspkhelper.mechanism.all-edit policykit helper policy
 RDEPEND="${DEPEND}
-	media-libs/libcanberra[pulseaudio]
+	media-libs/libcanberra[pulseaudio,sound(+)]
 	systemd? ( >=sys-apps/systemd-31 )
 	elogind? (
 		app-admin/openrc-settingsd
@@ -99,7 +105,7 @@ RDEPEND="${DEPEND}
 		app-admin/system-config-printer
 		net-print/cups-pk-helper
 	)
-	gnome-extra/tecla
+	>=gnome-extra/tecla-47
 	wayland? ( dev-libs/libinput )
 	!wayland? (
 		>=x11-drivers/xf86-input-libinput-0.19.0
@@ -131,11 +137,10 @@ BDEPEND="${PYTHON_DEPS}
 "
 
 PATCHES=(
-	# "${FILESDIR}"/0001-build-${PV}-optional-bluetooth-NetworkManager-Wacom.patch
-	# "${FILESDIR}"/0002-build-46.1-optional-Kerberos.patch
-	# "${FILESDIR}"/0003-build-46.1-optional-gnome-online-accounts.patch
-	# "${FILESDIR}"/0004-build-46.1-optional-cups-printer-panel.patch
-	"${FILESDIR}"/0005-build-46.1-Fix-absolute-paths-to-use-build-config.patch
+	# Makes some panels and dependencies optional
+	# https://bugzilla.gnome.org/686840, 697478, 700145
+	# Fix some absolute paths to be appropriate for Gentoo
+	# "${WORKDIR}"/patches/
 )
 
 python_check_deps() {
@@ -165,12 +170,14 @@ src_configure() {
 	filter-lto
 
 	local emesonargs=(
-		#$(meson_use bluetooth)
-		#-Dcups=$(usex cups enabled disabled)
+		# $(meson_use bluetooth)
+		# -Dcups=$(usex cups enabled disabled)
+		-Ddeprecated-declarations=disabled
 		-Ddocumentation=true # manpage
-		#-Dgoa=$(usex gnome-online-accounts enabled disabled)
+		-Dlocation-services=$(usex geolocation enabled disabled)
+		# -Dgoa=$(usex gnome-online-accounts enabled disabled)
 		$(meson_use ibus)
-		#-Dkerberos=$(usex kerberos enabled disabled)
+		# -Dkerberos=$(usex kerberos enabled disabled)
 		# $(meson_use networkmanager network_manager)
 		-Dprivileged_group=wheel
 		-Dsnap=false
@@ -193,8 +200,8 @@ src_test() {
 src_install() {
 	meson_src_install
 	insinto /usr/share/pixmaps
-	doins "${FILESDIR}"/gnome-control-center-gentoo-logo.svg
-	doins "${FILESDIR}"/gnome-control-center-gentoo-logo-dark.svg
+	doins "${DISTDIR}"/gnome-control-center-gentoo-logo.svg
+	doins "${DISTDIR}"/gnome-control-center-gentoo-logo-dark.svg
 }
 
 pkg_postinst() {
