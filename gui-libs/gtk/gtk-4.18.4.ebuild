@@ -1,8 +1,8 @@
-# Copyright 2023-2024 Gentoo Authors
+# Copyright 2023-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
-PYTHON_COMPAT=( python3_{10..12} )
+PYTHON_COMPAT=( python3_{10..13} )
 inherit gnome.org gnome2-utils meson optfeature python-any-r1 toolchain-funcs virtualx xdg
 
 DESCRIPTION="GTK is a multi-platform toolkit for creating graphical user interfaces"
@@ -16,13 +16,13 @@ REQUIRED_USE="
 	test? ( introspection )
 "
 
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~ia64 ~loong ~ppc ~ppc64 ~riscv ~sparc ~x86"
+KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~sparc ~x86"
 
 # TODO: Optional gst build dep on >=gst-plugins-base-1.23.1, so depend on it once we can
 COMMON_DEPEND="
 	>=dev-libs/glib-2.76.0:2
-	>=x11-libs/cairo-1.17.6[aqua?,glib,svg(+),X?]
-	>=x11-libs/pango-1.50.0[introspection?]
+	>=x11-libs/cairo-1.18.0[aqua?,glib,svg(+),X?]
+	>=x11-libs/pango-1.56.0[introspection?]
 	>=dev-libs/fribidi-1.0.6
 	>=media-libs/harfbuzz-2.6.0:=
 	>=x11-libs/gdk-pixbuf-2.30:2[introspection?]
@@ -39,18 +39,18 @@ COMMON_DEPEND="
 	cups? ( >=net-print/cups-2.0 )
 	examples? ( gnome-base/librsvg:2 )
 	gstreamer? (
-		>=media-libs/gstreamer-1.12.3:1.0
-		>=media-libs/gst-plugins-bad-1.12.3:1.0
+		>=media-libs/gstreamer-1.24.0:1.0
+		>=media-libs/gst-plugins-bad-1.24.0:1.0
 		|| (
-			>=media-libs/gst-plugins-base-1.12.3:1.0[gles2]
-			>=media-libs/gst-plugins-base-1.12.3:1.0[opengl]
+			>=media-libs/gst-plugins-base-1.24.0:1.0[gles2]
+			>=media-libs/gst-plugins-base-1.24.0:1.0[opengl]
 		)
 	)
 	introspection? ( >=dev-libs/gobject-introspection-1.76:= )
-	vulkan? ( >=media-libs/vulkan-loader-1.3:= )
+	vulkan? ( >=media-libs/vulkan-loader-1.3:=[wayland?,X?] )
 	wayland? (
 		>=dev-libs/wayland-1.21.0
-		>=dev-libs/wayland-protocols-1.31
+		>=dev-libs/wayland-protocols-1.41
 		media-libs/mesa[wayland]
 		>=x11-libs/libxkbcommon-0.2
 	)
@@ -113,7 +113,7 @@ PATCHES=(
 	# with USE="-wayland -X" to trick gtk into claiming that it wasn't built with
 	# such support.
 	# https://bugs.gentoo.org/624960
-	"${FILESDIR}"/0001-gdk-add-a-poison-macro-to-hide-GDK_WINDOWING_.patch
+	# "${FILESDIR}"/0001-gdk-add-a-poison-macro-to-hide-GDK_WINDOWING_.patch
 )
 
 python_check_deps() {
@@ -192,6 +192,10 @@ src_configure() {
 src_test() {
 	"${BROOT}${GLIB_COMPILE_SCHEMAS}" --allow-any-name "${S}/gtk" || die
 
+	# Note that skipping gsk-compare entirely means we do run *far*
+	# fewer tests, but a reliable testsuite for us is more important
+	# than absolute-maximum coverage if we can't trust the results and
+	# dismiss any failures as "probably font related" and so on.
 	if use X; then
 		einfo "Running tests under X"
 		GSETTINGS_SCHEMA_DIR="${S}/gtk" virtx meson_src_test --timeout-multiplier=130 \
@@ -200,7 +204,9 @@ src_test() {
 			--no-suite=x11_failing \
 			--no-suite=flaky \
 			--no-suite=headless \
-			--no-suite=gsk-compare-broadway
+			--no-suite=gsk-compare \
+			--no-suite=gsk-compare-broadway \
+			--no-suite=needs-udmabuf
 	fi
 
 	if use wayland; then
@@ -218,7 +224,9 @@ src_test() {
 			--no-suite=wayland_failing \
 			--no-suite=flaky \
 			--no-suite=headless \
-			--no-suite=gsk-compare-broadway
+			--no-suite=gsk-compare \
+			--no-suite=gsk-compare-broadway \
+			--no-suite=needs-udmabuf
 
 		exit_code=$?
 		kill ${compositor}
@@ -228,9 +236,11 @@ src_test() {
 src_install() {
 	meson_src_install
 
-	insinto /usr/share/gtk-doc/html
+	# TODO: Seems that HTML docs are no longer in the tarball after
+	# upstream switched to CI-generated releases? bug #947514
+	#insinto /usr/share/gtk-doc/html
 	# This will install API docs specific to X11 and wayland regardless of USE flags, but this is intentional
-	doins -r "${S}"/docs/reference/{gtk/gtk4,gsk/gsk4,gdk/gdk4{,-wayland,-x11}}
+	#doins -r "${S}"/docs/reference/{gtk/gtk4,gsk/gsk4,gdk/gdk4{,-wayland,-x11}}
 }
 
 pkg_preinst() {
