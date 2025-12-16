@@ -117,7 +117,7 @@ src_prepare() {
 	# Show logo when branding is enabled
 	use branding && eapply "${FILESDIR}/${PN}-3.30.3-logo.patch"
 
-	eapply "${FILESDIR}/47.0-c23.patch"
+	# eapply "${FILESDIR}/47.0-c23.patch"
 }
 
 src_configure() {
@@ -170,9 +170,9 @@ src_configure() {
 src_install() {
 	meson_src_install
 
-	if ! use accessibility ; then
-		rm "${ED}"/usr/share/gdm/greeter/autostart/orca-autostart.desktop || die
-	fi
+	#if ! use accessibility ; then
+	#	rm "${ED}"/usr/share/gdm/greeter/autostart/orca-autostart.desktop || die
+	#fi
 
 	if ! use bluetooth-sound ; then
 		# Workaround https://gitlab.freedesktop.org/pulseaudio/pulseaudio/merge_requests/10
