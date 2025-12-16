@@ -1,4 +1,4 @@
-# Copyright 1999-2024 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -21,8 +21,8 @@ BDEPEND="
 "
 
 PATCHES=(
-	# Revert change to 'Source Code Pro 10' and 'Cantarell 11' fonts back to generic sans and monospace aliases
-	# "${FILESDIR}"/3.32.0-default-fonts.patch
+	# Use generic sans and monospace aliases
+#	"${FILESDIR}"/48.0-default-fonts.patch
 )
 
 src_configure() {
