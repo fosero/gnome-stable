@@ -1,33 +1,32 @@
-# Copyright 1999-2024 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
-PYTHON_COMPAT=( python3_{10..13} )
+PYTHON_COMPAT=( python3_{11..14} )
 
 inherit flag-o-matic gnome.org gnome2-utils meson python-any-r1 systemd xdg
 
-DESCRIPTION="Collection of data extractors for Tracker/Nepomuk"
-HOMEPAGE="https://wiki.gnome.org/Projects/Tracker"
+DESCRIPTION="Indexer and search engine that powers desktop search for core GNOME components"
+HOMEPAGE="https://gnome.pages.gitlab.gnome.org/localsearch"
 
 LICENSE="GPL-2+ LGPL-2.1+"
 SLOT="3"
+KEYWORDS="~alpha amd64 ~arm arm64 ~loong ~ppc ~ppc64 ~riscv ~sparc x86"
 IUSE="cue exif ffmpeg gif gsf +gstreamer iptc +iso +jpeg networkmanager +pdf +playlist raw +rss seccomp test +tiff upower +xml xmp xps"
 
 REQUIRED_USE="cue? ( gstreamer )" # cue is currently only supported via gstreamer, not ffmpeg
 RESTRICT="!test? ( test )"
 
-KEYWORDS="~alpha amd64 ~arm arm64 ~ia64 ~loong ~ppc ~ppc64 ~riscv ~sparc x86"
-
 # tracker-2.1.7 currently always depends on ICU (theoretically could be libunistring instead);
 # so choose ICU over enca always here for the time being (ICU is preferred)
 RDEPEND="
-	!app-misc/tracker-miners
-	>=dev-libs/glib-2.70:2
 	>=app-misc/tinysparql-3.8:3
-
 	>=sys-apps/dbus-1.3.1
 	xmp? ( >=media-libs/exempi-2.1.0:= )
 	raw? ( media-libs/gexiv2 )
+	>=dev-libs/glib-2.70:2
+	dev-libs/libgudev
+	dev-libs/gobject-introspection
 	cue? ( media-libs/libcue:= )
 	exif? ( >=media-libs/libexif-0.6 )
 	gsf? ( >=gnome-extra/libgsf-1.14.24:= )
@@ -38,10 +37,9 @@ RDEPEND="
 	>=media-libs/libpng-1.2:0=
 	seccomp? ( >=sys-libs/libseccomp-2.0 )
 	tiff? ( media-libs/tiff:= )
-	xml? ( >=dev-libs/libxml2-2.6 )
+	xml? ( >=dev-libs/libxml2-2.6:= )
 	pdf? ( >=app-text/poppler-0.16.0:=[cairo] )
 	playlist? ( >=dev-libs/totem-pl-parser-3:= )
-	sys-apps/util-linux
 
 	gif? ( media-libs/giflib:= )
 
@@ -73,7 +71,7 @@ BDEPEND="
 	test? (
 		${PYTHON_DEPS}
 		$(python_gen_any_dep 'dev-python/pygobject[${PYTHON_USEDEP}]')
-		$(python_gen_any_dep 'dev-python/tappy[${PYTHON_USEDEP}]')
+		$(python_gen_any_dep 'dev-python/tap-py[${PYTHON_USEDEP}]')
 		gstreamer? (
 			media-libs/gstreamer:1.0[introspection]
 			|| (
@@ -84,10 +82,15 @@ BDEPEND="
 	)
 "
 
+PATCHES=(
+#	"${FILESDIR}/localsearch-3.8.2-ontologies.patch"
+#	"${FILESDIR}/localsearch-3.8.2-ffmpeg-7.patch"
+)
+
 python_check_deps() {
 	python_has_version -b \
 		"dev-python/pygobject[${PYTHON_USEDEP}]" \
-		"dev-python/tappy[${PYTHON_USEDEP}]"
+		"dev-python/tap-py[${PYTHON_USEDEP}]"
 }
 
 pkg_setup() {
@@ -108,6 +111,9 @@ src_prepare() {
 }
 
 src_configure() {
+	# bug #944218
+	append-cflags -std=gnu17
+
 	append-cflags -DTRACKER_DEBUG -DG_DISABLE_CAST_CHECKS
 
 	local media_extractor="none"
@@ -123,7 +129,7 @@ src_configure() {
 		$(meson_use test functional_tests)
 		$(meson_use test tests_tap_protocol)
 		-Dminer_fs=true
-		$(meson_use rss miner_rss)
+#		$(meson_use rss miner_rss)
 		-Dwriteback=true
 		-Dabiword=true
 		-Dicon=true
@@ -131,9 +137,13 @@ src_configure() {
 		-Dps=true
 		-Dtext=true
 		-Dunzip_ps_gz_files=true # spawns gunzip
+		# Broken with our library layout for libstdc++ (bug #957705)
+		# Once https://gitlab.gnome.org/GNOME/localsearch/-/issues/368 is fixed,
+		# we should add a USE flag for it but likely give it the same treatment
+		# as seccomp (i.e. package.use.force).
 		-Dlandlock=disabled
 
-		$(meson_feature networkmanager network_manager)
+#		$(meson_feature networkmanager network_manager)
 		$(meson_feature cue)
 		$(meson_feature exif)
 		$(meson_feature gif)
@@ -153,7 +163,7 @@ src_configure() {
 		-Dbattery_detection=$(usex upower upower none)
 		# enca is a possibility, but right now we have tracker core always dep on icu and icu is preferred over enca
 		-Dcharset_detection=icu
-		-Dgeneric_media_extractor=${media_extractor}
+#		-Dgeneric_media_extractor=${media_extractor}
 		# gupnp gstreamer_backend is in bad state, upstream suggests to use discoverer, which is the default
 		-Dsystemd_user_services_dir="$(systemd_get_userunitdir)"
 	)
@@ -162,8 +172,8 @@ src_configure() {
 
 src_test() {
 	export GSETTINGS_BACKEND="dconf" # Tests require dconf and explicitly check for it (env_reset set it to "memory")
-	export PYTHONPATH="${EROOT}"/usr/$(get_libdir)/tracker-3.0
-	dbus-run-session meson test -C "${BUILD_DIR}" || die 'tests failed'
+	export PYTHONPATH="${ESYSROOT}"/usr/$(get_libdir)/tinysparql-3.0
+	dbus-run-session meson test -C "${BUILD_DIR}" --no-suite examples || die 'tests failed'
 }
 
 pkg_postinst() {
