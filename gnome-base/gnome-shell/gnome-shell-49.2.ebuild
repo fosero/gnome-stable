@@ -2,18 +2,18 @@
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
-PYTHON_COMPAT=( python3_{10..13} )
+PYTHON_COMPAT=( python3_{11..14} )
 
-inherit gnome.org gnome2-utils meson optfeature python-single-r1 virtualx xdg
+inherit flag-o-matic gnome.org gnome2-utils meson optfeature python-single-r1 virtualx xdg
 
 DESCRIPTION="Provides core UI functions for the GNOME desktop"
 HOMEPAGE="https://gitlab.gnome.org/GNOME/gnome-shell"
 
 LICENSE="GPL-2+ LGPL-2+"
 SLOT="0"
-KEYWORDS="~amd64 ~arm ~arm64 ~loong ~riscv ~x86"
+KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc64 ~riscv ~x86"
 
-IUSE="elogind gtk-doc +ibus +networkmanager pipewire systemd test"
+IUSE="X elogind gtk-doc +ibus +networkmanager pipewire systemd test wayland"
 REQUIRED_USE="${PYTHON_REQUIRED_USE}
 	?? ( elogind systemd )"
 RESTRICT="!test? ( test )"
@@ -22,13 +22,13 @@ RESTRICT="!test? ( test )"
 DEPEND="
 	>=gnome-extra/evolution-data-server-3.46.0:=
 	>=app-crypt/gcr-3.90.0:4=[introspection]
-	>=dev-libs/glib-2.68:2
-	>=dev-libs/gobject-introspection-1.49.1:=
-	>=dev-libs/gjs-1.73.1[cairo(+)]
-	>=gui-libs/gtk-4:4[introspection]
-	>=x11-wm/mutter-48.0:0/16[introspection,test?]
+	>=dev-libs/glib-2.86:2
+	>=dev-libs/gobject-introspection-1.86:=
+	>=dev-libs/gjs-1.86.0[cairo(+)]
+	>=gui-libs/gtk-4:4[X?,introspection,wayland?]
+	>=x11-wm/mutter-49.0:0/17[introspection,test?]
 	>=sys-auth/polkit-0.120_p20220509[introspection]
-	>=gnome-base/gsettings-desktop-schemas-48[introspection]
+	>=gnome-base/gsettings-desktop-schemas-49[introspection]
 	>=app-i18n/ibus-1.5.19
 	dev-python/docutils
 	>=gnome-base/gnome-desktop-40.0:4=
@@ -49,7 +49,7 @@ DEPEND="
 
 	>=app-accessibility/at-spi2-core-2.46:2[introspection]
 	x11-libs/gdk-pixbuf:2[introspection]
-	dev-libs/libxml2:2
+	dev-libs/libxml2:2=
 	x11-libs/libX11
 
 	>=media-libs/libpulse-2[glib]
@@ -79,7 +79,7 @@ DEPEND="
 # 5. adwaita-icon-theme needed for various icons & arrows (3.26 for new video-joined-displays-symbolic and co icons; review for 3.28+)
 # 6. mobile-broadband-provider-info, timezone-data for shell-mobile-providers.c  # TODO: Review
 # 7. IBus is needed for nls integration
-# 8. Cantarell font used in gnome-shell global CSS (if removing this for some reason, make sure it's pulled in somehow for non-meta users still too)
+# 8. Adwaita font used in gnome-shell global CSS (if removing this for some reason, make sure it's pulled in somehow for non-meta users still too)
 # 9. xdg-desktop-portal-gtk for various integration, e.g. #764632
 # 10. TODO: semi-optional webkit-gtk[introspection] for captive portal helper
 RDEPEND="${DEPEND}
@@ -87,7 +87,7 @@ RDEPEND="${DEPEND}
 	app-accessibility/at-spi2-core:2[introspection]
 	app-misc/geoclue:2.0[introspection]
 	media-libs/graphene[introspection]
-	x11-libs/pango[introspection]
+	>=x11-libs/pango-1.46.0[introspection]
 	net-libs/libsoup:3.0[introspection]
 	>=sys-power/upower-0.99:=[introspection]
 	gnome-base/librsvg:2[introspection]
@@ -105,7 +105,7 @@ RDEPEND="${DEPEND}
 		sys-libs/timezone-data
 	)
 	ibus? ( >=app-i18n/ibus-1.5.26[gtk3,gtk4,introspection] )
-	media-fonts/cantarell
+	media-fonts/adwaita-fonts
 
 	sys-apps/xdg-desktop-portal-gnome
 "
@@ -115,6 +115,7 @@ PDEPEND="
 	>=gnome-base/gnome-control-center-3.26[networkmanager(+)?]
 "
 BDEPEND="
+	>=dev-build/meson-1.3.0
 	dev-libs/libxslt
 	>=dev-util/gdbus-codegen-2.45.3
 	dev-util/glib-utils
@@ -132,11 +133,6 @@ BDEPEND="
 # dev-lang/sassc
 # app-text/asciidoc
 
-PATCHES=(
-	# Change favorites defaults, bug #479918
-	# "${FILESDIR}"/46.4-defaults.patch
-)
-
 src_prepare() {
 	default
 	xdg_environment_reset
@@ -145,6 +141,9 @@ src_prepare() {
 }
 
 src_configure() {
+	use X || append-cppflags -DGENTOO_GTK_HIDE_X11
+	use wayland || append-cppflags -DGENTOO_GTK_HIDE_WAYLAND
+
 	local emesonargs=(
 		$(meson_use pipewire camera_monitor)
 		-Dextensions_tool=true
