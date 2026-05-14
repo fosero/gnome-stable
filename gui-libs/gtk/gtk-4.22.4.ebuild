@@ -1,34 +1,38 @@
-# Copyright 2023-2025 Gentoo Authors
+# Copyright 2023-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
-PYTHON_COMPAT=( python3_{10..13} )
-inherit gnome.org gnome2-utils meson optfeature python-any-r1 toolchain-funcs virtualx xdg
+PYTHON_COMPAT=( python3_{11..14} )
+inherit flag-o-matic gnome.org gnome2-utils meson optfeature python-any-r1 toolchain-funcs virtualx xdg
 
 DESCRIPTION="GTK is a multi-platform toolkit for creating graphical user interfaces"
 HOMEPAGE="https://www.gtk.org/ https://gitlab.gnome.org/GNOME/gtk/"
 
 LICENSE="LGPL-2+"
 SLOT="4"
-IUSE="aqua broadway cloudproviders colord cups examples gstreamer +introspection sysprof test vulkan wayland +X cpu_flags_x86_f16c"
 REQUIRED_USE="
 	|| ( aqua wayland X )
+	gtk-doc? ( introspection )
 	test? ( introspection )
 "
+KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~sparc ~x86"
+IUSE="aqua broadway cloudproviders colord cups examples gstreamer gtk-doc +introspection sysprof test vulkan wayland +X cpu_flags_x86_f16c"
 
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~sparc ~x86"
-
-# TODO: Optional gst build dep on >=gst-plugins-base-1.23.1, so depend on it once we can
+# librsvg for svg icons and "!8541 Use librsvg for symbolics that we
+#     can't parse ourselves" (formerly a PDEPEND to avoid circular dep
+#     on wd40 profiles with librsvg[tools]), bug #547710
+# NOTE: Support was added to build against both cups2 and cups3
 COMMON_DEPEND="
-	>=dev-libs/glib-2.76.0:2
-	>=x11-libs/cairo-1.18.0[aqua?,glib,svg(+),X?]
+	>=dev-libs/glib-2.82:2
+	>=x11-libs/cairo-1.18.2[aqua?,glib,svg(+),X?]
 	>=x11-libs/pango-1.56.0[introspection?]
 	>=dev-libs/fribidi-1.0.6
-	>=media-libs/harfbuzz-2.6.0:=
+	>=media-libs/harfbuzz-8.4.0:=
 	>=x11-libs/gdk-pixbuf-2.30:2[introspection?]
 	media-libs/libpng:=
 	media-libs/tiff:=
 	media-libs/libjpeg-turbo:=
+	>=gnome-base/librsvg-2.48:2
 	>=media-libs/libepoxy-1.4[egl(+),X(+)?]
 	>=media-libs/graphene-1.10.0[introspection?]
 	app-text/iso-codes
@@ -46,11 +50,14 @@ COMMON_DEPEND="
 			>=media-libs/gst-plugins-base-1.24.0:1.0[opengl]
 		)
 	)
-	introspection? ( >=dev-libs/gobject-introspection-1.76:= )
-	vulkan? ( >=media-libs/vulkan-loader-1.3:=[wayland?,X?] )
+	introspection? ( >=dev-libs/gobject-introspection-1.84:= )
+	vulkan? (
+		>=media-libs/vulkan-loader-1.3:=[wayland?,X?]
+		media-libs/mesa[vulkan]
+		)
 	wayland? (
-		>=dev-libs/wayland-1.21.0
-		>=dev-libs/wayland-protocols-1.41
+		>=dev-libs/wayland-1.24.0
+		>=dev-libs/wayland-protocols-1.44
 		media-libs/mesa[wayland]
 		>=x11-libs/libxkbcommon-0.2
 	)
@@ -78,13 +85,11 @@ DEPEND="${COMMON_DEPEND}
 RDEPEND="${COMMON_DEPEND}
 	>=dev-util/gtk-update-icon-cache-3
 "
-# librsvg for svg icons (PDEPEND to avoid circular dep on wd40 profiles with librsvg[tools]), bug #547710
 PDEPEND="
-	gnome-base/librsvg:2
 	>=x11-themes/adwaita-icon-theme-3.14
 "
 BDEPEND="
-	dev-libs/gobject-introspection-common
+	>=dev-build/meson-1.5.0
 	introspection? (
 		${PYTHON_DEPS}
 		$(python_gen_any_dep '
@@ -92,14 +97,15 @@ BDEPEND="
 		')
 	)
 	dev-python/docutils
-	dev-libs/glib
-	>=dev-util/gdbus-codegen-2.48
+	>=dev-libs/glib-2.82
+	>=dev-util/gdbus-codegen-2.80.5-r1
 	dev-util/glib-utils
 	>=sys-devel/gettext-0.19.7
 	virtual/pkgconfig
+	gtk-doc? ( dev-util/gi-docgen )
 	vulkan? ( media-libs/shaderc )
 	wayland? (
-		dev-util/wayland-scanner
+		>=dev-util/wayland-scanner-1.24.0
 	)
 	test? (
 		dev-libs/glib:2
@@ -113,7 +119,9 @@ PATCHES=(
 	# with USE="-wayland -X" to trick gtk into claiming that it wasn't built with
 	# such support.
 	# https://bugs.gentoo.org/624960
-	# "${FILESDIR}"/0001-gdk-add-a-poison-macro-to-hide-GDK_WINDOWING_.patch
+	# "${FILESDIR}"/0001-gdk-add-a-poison-macro-to-hide-GDK_WINDOWING_ge_4.18.5.patch
+
+	# "${FILESDIR}"/${P}-32-bit.patch
 )
 
 python_check_deps() {
@@ -146,12 +154,15 @@ src_prepare() {
 }
 
 src_configure() {
+	use x86 && append-flags -DDISABLE_X64=1 #943705 https://gitlab.gnome.org/GNOME/gtk/-/issues/4173
+
 	local emesonargs=(
 		# GDK backends
 		$(meson_use X x11-backend)
 		$(meson_use wayland wayland-backend)
 		$(meson_use broadway broadway-backend)
 		-Dwin32-backend=false
+		-Dandroid-backend=false
 		$(meson_use aqua macos-backend)
 
 		# Media backends
@@ -170,12 +181,12 @@ src_configure() {
 		# Expected to fail with GCC < 11
 		# See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=71993
 		$(meson_feature cpu_flags_x86_f16c f16c)
-
+		-Dandroid-runtime=disabled
 		# Introspection
 		$(meson_feature introspection)
 
 		# Documentation
-		-Ddocumentation=false # we ship pregenerated API docs from tarball
+		$(meson_use gtk-doc documentation)
 		-Dscreenshots=false
 		-Dman-pages=true
 
@@ -192,6 +203,8 @@ src_configure() {
 src_test() {
 	"${BROOT}${GLIB_COMPILE_SCHEMAS}" --allow-any-name "${S}/gtk" || die
 
+	addwrite /dev/dri
+
 	# Note that skipping gsk-compare entirely means we do run *far*
 	# fewer tests, but a reliable testsuite for us is more important
 	# than absolute-maximum coverage if we can't trust the results and
@@ -206,7 +219,8 @@ src_test() {
 			--no-suite=headless \
 			--no-suite=gsk-compare \
 			--no-suite=gsk-compare-broadway \
-			--no-suite=needs-udmabuf
+			--no-suite=needs-udmabuf \
+			--no-suite=pango
 	fi
 
 	if use wayland; then
@@ -234,13 +248,31 @@ src_test() {
 }
 
 src_install() {
+	local i src
+
 	meson_src_install
 
-	# TODO: Seems that HTML docs are no longer in the tarball after
-	# upstream switched to CI-generated releases? bug #947514
-	#insinto /usr/share/gtk-doc/html
-	# This will install API docs specific to X11 and wayland regardless of USE flags, but this is intentional
-	#doins -r "${S}"/docs/reference/{gtk/gtk4,gsk/gsk4,gdk/gdk4{,-wayland,-x11}}
+	if use gtk-doc; then
+		mkdir -p "${ED}/usr/share/gtk-doc/html" || die
+
+		for dir in gdk4 gtk4 gsk4; do
+			src="${ED}/usr/share/doc/${dir}"
+			test -d "${src}" || die "Expected documentation directory ${src} not found"
+			mv -v "${src}" "${ED}/usr/share/gtk-doc/html" || die
+		done
+
+		if use X; then
+			src="${ED}/usr/share/doc/gdk4-x11"
+			test -d "${src}" || die "Expected X11 documentation ${src} not found"
+			mv -v "${src}" "${ED}/usr/share/gtk-doc/html" || die
+		fi
+
+		if use wayland; then
+			src="${ED}/usr/share/doc/gdk4-wayland"
+			test -d "${src}" || die "Expected Wayland documentation ${src} not found"
+			mv -v "${src}" "${ED}/usr/share/gtk-doc/html" || die
+		fi
+	fi
 }
 
 pkg_preinst() {
