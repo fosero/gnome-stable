@@ -1,18 +1,29 @@
-# Copyright 1999-2024 Gentoo Authors
+# Copyright 1999-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
 PYTHON_REQ_USE="xml(+)"
-PYTHON_COMPAT=( python3_{10..13} )
+PYTHON_COMPAT=( python3_{12..15} )
 
-inherit gnome.org gnome2-utils linux-info meson-multilib multilib python-any-r1 toolchain-funcs xdg
+inherit dot-a eapi9-ver gnome.org gnome2-utils linux-info meson-multilib multilib python-any-r1 toolchain-funcs xdg
 
 DESCRIPTION="The GLib library of C routines"
 HOMEPAGE="https://www.gtk.org/"
 
+INTROSPECTION_PN="gobject-introspection"
+INTROSPECTION_PV="1.86.0"
+INTROSPECTION_P="${INTROSPECTION_PN}-${INTROSPECTION_PV}"
+SRC_URI="
+	${SRC_URI}
+	https://distfiles.gentoo.org/pub/dev/sam%40gentoo.org/${CATEGORY}/${PN}/${PN}-2.88.2-const-whoops.patch.xz
+	introspection? ( mirror://gnome/sources/gobject-introspection/${INTROSPECTION_PV%.*}/gobject-introspection-${INTROSPECTION_PV}.tar.${GNOME_TARBALL_SUFFIX} )
+"
+INTROSPECTION_SOURCE_DIR="${WORKDIR}/${INTROSPECTION_P}"
+INTROSPECTION_BUILD_DIR="${WORKDIR}/${INTROSPECTION_P}-build"
+
 LICENSE="LGPL-2.1+"
 SLOT="2"
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~sparc ~x86 ~amd64-linux ~x86-linux ~arm64-macos ~ppc-macos ~x64-macos ~x64-solaris"
+KEYWORDS="~alpha ~amd64 ~arm arm64 ~hppa ~loong ~m68k ~mips ppc ppc64 ~riscv ~s390 ~sparc ~x86 ~arm64-macos ~x64-macos ~x64-solaris"
 IUSE="dbus debug +elf doc +introspection +mime selinux static-libs sysprof systemtap test utils xattr"
 RESTRICT="!test? ( test )"
 
@@ -26,35 +37,45 @@ RESTRICT="!test? ( test )"
 # them or just put the (build) deps in that rare consumer instead of recursive
 # RDEPEND here (due to lack of recursive DEPEND).
 RDEPEND="
-	!<dev-libs/gobject-introspection-1.80.1
+	!<dev-libs/gobject-introspection-${INTROSPECTION_PV}
 	!<dev-util/gdbus-codegen-${PV}
 	>=virtual/libiconv-0-r1[${MULTILIB_USEDEP}]
 	>=dev-libs/libpcre2-10.32:0=[${MULTILIB_USEDEP},unicode(+),static-libs?]
 	>=dev-libs/libffi-3.0.13-r1:=[${MULTILIB_USEDEP}]
-	>=sys-libs/zlib-1.2.8-r1[${MULTILIB_USEDEP}]
+	>=virtual/zlib-1.2.8-r1:=[${MULTILIB_USEDEP}]
 	>=virtual/libintl-0-r2[${MULTILIB_USEDEP}]
-	introspection? ( >=dev-libs/gobject-introspection-1.80.1 )
 	kernel_linux? ( >=sys-apps/util-linux-2.23[${MULTILIB_USEDEP}] )
 	selinux? ( >=sys-libs/libselinux-2.2.2-r5[${MULTILIB_USEDEP}] )
 	xattr? ( !elibc_glibc? ( >=sys-apps/attr-2.4.47-r1[${MULTILIB_USEDEP}] ) )
 	elf? ( virtual/libelf:0= )
 	sysprof? ( >=dev-util/sysprof-capture-3.40.1:4[${MULTILIB_USEDEP}] )
 "
-DEPEND="${RDEPEND}"
+DEPEND="
+	${RDEPEND}
+	systemtap? ( >=dev-debug/systemtap-1.3 )
+"
 # libxml2 used for optional tests that get automatically skipped
 BDEPEND="
 	app-text/docbook-xsl-stylesheets
+	>=dev-build/meson-1.4.0
 	dev-libs/libxslt
 	>=sys-devel/gettext-0.19.8
-	doc? ( >=dev-util/gi-docgen-2023.1 )
+	doc? ( >=dev-util/gi-docgen-2026.1 )
 	dev-python/docutils
 	systemtap? ( >=dev-debug/systemtap-1.3 )
 	${PYTHON_DEPS}
-	$(python_gen_any_dep '
-		dev-python/packaging[${PYTHON_USEDEP}]
-	')
 	test? ( >=sys-apps/dbus-1.2.14 )
 	virtual/pkgconfig
+
+	introspection? (
+		$(python_gen_any_dep '
+			dev-python/setuptools[${PYTHON_USEDEP}]
+		')
+		virtual/pkgconfig
+		sys-devel/bison
+		app-alternatives/lex
+		${PYTHON_DEPS}
+	)
 "
 # TODO: >=dev-util/gdbus-codegen-${PV} test dep once we modify gio/tests/meson.build to use external gdbus-codegen
 
@@ -74,7 +95,9 @@ PATCHES=(
 )
 
 python_check_deps() {
-	python_has_version "dev-python/packaging[${PYTHON_USEDEP}]"
+	if use introspection ; then
+		python_has_version "dev-python/setuptools[${PYTHON_USEDEP}]"
+	fi
 }
 
 pkg_setup() {
@@ -92,14 +115,6 @@ pkg_setup() {
 src_prepare() {
 	if use test; then
 		# TODO: Review the test exclusions, especially now with meson
-		# Disable tests requiring dev-util/desktop-file-utils when not installed, bug #286629, upstream bug #629163
-		if ! has_version dev-util/desktop-file-utils ; then
-			ewarn "Some tests will be skipped due dev-util/desktop-file-utils not being present on your system,"
-			ewarn "think on installing it to get these tests run."
-			sed -i -e "/appinfo\/associations/d" gio/tests/appinfo.c || die
-			sed -i -e "/g_test_add_func/d" gio/tests/desktop-app-info.c || die
-		fi
-
 		# gdesktopappinfo requires existing terminal (gnome-terminal or any
 		# other), falling back to xterm if one doesn't exist
 		#if ! has_version x11-terms/xterm && ! has_version x11-terms/gnome-terminal ; then
@@ -118,6 +133,9 @@ src_prepare() {
 
 		ewarn "Tests for search-utils have been skipped"
 		sed -i -e "/search-utils/d" glib/tests/meson.build || die
+
+		# Running gdb inside a test within sandbox is brittle
+		sed -i -e '/self.__gdb = shutil.which("gdb")/s:"gdb":"gdb-idonotexist":' glib/tests/assert-msg-test.py || die
 
 		# Play nice with network-sandbox, but this approach would defeat the purpose of the test
 		#sed -i -e "s/localhost/127.0.0.1/g" gio/tests/gsocketclient-slow.c || die
@@ -167,9 +185,19 @@ src_prepare() {
 		-e '/AvailabilityMacros.h/d' \
 		gio/giomodule.c || die
 
+	# Link the glib source to the introspection subproject directory so it can be built there first
+	if use introspection ; then
+		ln -s "${S}" "${INTROSPECTION_SOURCE_DIR}/subprojects/glib"
+	fi
+
 	default
 	gnome2_environment_reset
 	# TODO: python_name sedding for correct python shebang? Might be relevant mainly for glib-utils only
+}
+
+src_configure() {
+	lto-guarantee-fat
+	meson-multilib_src_configure
 }
 
 multilib_src_configure() {
@@ -185,17 +213,135 @@ multilib_src_configure() {
 		#esac
 	#fi
 
+	_need_bootstrap_gi() {
+		if ! multilib_native_use introspection ; then
+			return 1
+		fi
+
+		if ! has_version ">=dev-libs/${INTROSPECTION_P}" ; then
+			return 0
+		fi
+
+		# Is the installed gobject-introspection usable?
+		if ! g-ir-scanner --version &> /dev/null ; then
+			return 0
+		fi
+
+		# Do we somehow have a dev-libs/gobject-introspection installed
+		# with an unsatisfied dependency? (bug #951487)
+		if ! $(tc-getPKG_CONFIG) --cflags gobject-introspection-1.0 &> /dev/null ; then
+			return 0
+		fi
+
+		# Make sure has_version didn't lie to us while at it as well,
+		# given bug #951487.
+		if ! $(tc-getPKG_CONFIG) --atleast-version=${INTROSPECTION_PV} gobject-introspection-1.0 &> /dev/null ; then
+			return 0
+		fi
+
+		return 1
+	}
+
+	# Build internal copy of gobject-introspection to avoid circular dependency (built for native abi only)
+	if _need_bootstrap_gi ; then
+		einfo "Bootstrapping gobject-introspection..."
+		INTROSPECTION_BIN_DIR="${T}/bootstrap-gi-prefix/usr/bin"
+		INTROSPECTION_LIB_DIR="${T}/bootstrap-gi-prefix/usr/$(get_libdir)"
+
+		local emesonargs=(
+			--prefix="${T}/bootstrap-gi-prefix/usr"
+			-Dpython="${EPYTHON}"
+			-Dbuild_introspection_data=true
+			# Build an internal copy of glib for the internal copy of gobject-introspection
+			--force-fallback-for=glib
+			# Make the paths in pkgconfig files relative as we used to not
+			# do a proper install here and it seems less risky to keep it
+			# this way.
+			-Dpkgconfig.relocatable=true
+
+			# We want as minimal a build as possible here to speed things up
+			# and reduce the risk of failures.
+			-Db_lto=false
+			-Dglib:selinux=disabled
+			-Dglib:xattr=false
+			-Dglib:libmount=disabled
+			-Dglib:man-pages=disabled
+			-Dglib:dtrace=disabled
+			-Dglib:systemtap=disabled
+			-Dglib:sysprof=disabled
+			-Dglib:documentation=false
+			-Dglib:tests=false
+			-Dglib:installed_tests=false
+			-Dglib:nls=disabled
+			-Dglib:oss_fuzz=disabled
+			-Dglib:libelf=disabled
+			-Dglib:multiarch=false
+		)
+
+		ORIG_SOURCE_DIR=${EMESON_SOURCE}
+		EMESON_SOURCE=${INTROSPECTION_SOURCE_DIR}
+
+		# g-ir-scanner has some relocatable logic but it searches
+		# for 'lib', not 'lib64', so it can't find itself and eventually
+		# falls back to the system installation. See bug #946221.
+		sed -i -e "/^pylibdir =/s:'lib:'$(get_libdir):" "${EMESON_SOURCE}"/tools/g-ir-tool-template.in || die
+
+		ORIG_BUILD_DIR=${BUILD_DIR}
+		BUILD_DIR=${INTROSPECTION_BUILD_DIR}
+
+		pushd ${INTROSPECTION_SOURCE_DIR} || die
+
+		meson_src_configure
+		meson_src_compile
+		# We already provide a prefix in ${T} above. Blank DESTDIR
+		# as it may be set in the environment by Portage (though not
+		# guaranteed in src_configure).
+		meson_src_install --destdir ""
+
+		popd || die
+
+		EMESON_SOURCE=${ORIG_SOURCE_DIR}
+		BUILD_DIR=${ORIG_BUILD_DIR}
+
+		# Add gobject-introspection binaries and pkgconfig files to path
+		export PATH="${INTROSPECTION_BIN_DIR}:${PATH}"
+
+		# Override primary pkgconfig search paths to prioritize our internal copy
+		local -x PKG_CONFIG_LIBDIR="${INTROSPECTION_LIB_DIR}/pkgconfig:${INTROSPECTION_BUILD_DIR}/meson-private:$($(tc-getPKG_CONFIG) --variable pc_system_libdirs pkg-config)"
+
+		# Set the normal primary pkgconfig search paths as secondary
+		# (We also need to prepend our just-built one for later use of
+		# g-ir-scanner to use the new one and to help workaround bugs like
+		# bug #946221.)
+		local -x PKG_CONFIG_PATH="${PKG_CONFIG_LIBDIR}:$($(tc-getPKG_CONFIG) --variable pc_path pkg-config)"
+
+		# Add the paths to the built glib libraries to the library path so that gobject-introspection can load them
+		local gliblib
+		for gliblib in glib gobject gthread gmodule gio girepository; do
+			export LD_LIBRARY_PATH="${BUILD_DIR}/${gliblib}:${LD_LIBRARY_PATH}"
+		done
+
+		# Add the path to introspection libraries so that glib can call gir utilities
+		export LD_LIBRARY_PATH="${INTROSPECTION_LIB_DIR}:${LD_LIBRARY_PATH}"
+
+		# Add the paths to the gobject-introspection python modules to python path so they can be imported
+		export PYTHONPATH="${INTROSPECTION_LIB_DIR}/gobject-introspection:${PYTHONPATH}"
+	fi
+
+	# TODO: Can this be cleaned up now we have -Dglib_debug? (bug #946485)
 	use debug && EMESON_BUILD_TYPE=debug
 
 	local emesonargs=(
+		--localstatedir="${EPREFIX}"/var
 		-Ddefault_library=$(usex static-libs both shared)
 		-Druntime_dir="${EPREFIX}"/run
+		$(meson_feature debug glib_debug)
 		$(meson_feature selinux)
 		$(meson_use xattr)
 		-Dlibmount=enabled # only used if host_system == 'linux'
 		-Dman-pages=enabled
-		$(meson_use systemtap dtrace)
-		$(meson_use systemtap)
+		$(meson_feature systemtap dtrace)
+		$(meson_feature systemtap)
 		$(meson_feature sysprof)
 		$(meson_use doc documentation)
 		$(meson_use test tests)
@@ -208,13 +354,12 @@ multilib_src_configure() {
 	)
 
 	# Workaround for bug #938302
-	if use systemtap && has_version "dev-debug/systemtap[-dtrace-symlink(+)]" ; then
-		local native_file="${T}"/meson.${CHOST}.ini.local
-		cat >> ${native_file} <<-EOF || die
+	if use systemtap; then
+		tc-export CC
+		meson_add_machine_file dtrace <<-EOF
 		[binaries]
 		dtrace='stap-dtrace'
 		EOF
-		emesonargs+=( --native-file "${native_file}" )
 	fi
 
 	meson_src_configure
@@ -223,6 +368,7 @@ multilib_src_configure() {
 multilib_src_test() {
 	export XDG_CONFIG_DIRS=/etc/xdg
 	export XDG_DATA_DIRS=/usr/local/share:/usr/share
+	# TODO: Use ${ABI} here to be unique for multilib?
 	export G_DBUS_COOKIE_SHA1_KEYRING_DIR="${T}/temp"
 	export LC_TIME=C # bug #411967
 	export TZ=UTC
@@ -234,7 +380,7 @@ multilib_src_test() {
 	addpredict /usr/b
 
 	# Related test is a bit nitpicking
-	mkdir "$G_DBUS_COOKIE_SHA1_KEYRING_DIR" || die
+	mkdir -p "$G_DBUS_COOKIE_SHA1_KEYRING_DIR" || die
 	chmod 0700 "$G_DBUS_COOKIE_SHA1_KEYRING_DIR" || die
 
 	meson_src_test --timeout-multiplier 20 --no-suite flaky
@@ -246,6 +392,8 @@ multilib_src_install() {
 }
 
 multilib_src_install_all() {
+	strip-lto-bytecode
+
 	# These are installed by dev-util/glib-utils
 	# TODO: With patching we might be able to get rid of the python-any deps
 	# and removals, and test depend on glib-utils instead; revisit now with
@@ -310,12 +458,10 @@ pkg_postinst() {
 		ewarn "installing GIO modules get upgraded or added to the image."
 	fi
 
-	for v in ${REPLACING_VERSIONS}; do
-		if ver_test "$v" "-lt" "2.63.6"; then
-			ewarn "glib no longer installs the gio-launch-desktop binary. You may need"
-			ewarn "to restart your session for \"Open With\" dialogs to work."
-		fi
-	done
+	if ver_replacing "-lt" "2.63.6"; then
+		ewarn "glib no longer installs the gio-launch-desktop binary. You may need"
+		ewarn "to restart your session for \"Open With\" dialogs to work."
+	fi
 }
 
 pkg_postrm() {
