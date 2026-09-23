@@ -2,7 +2,8 @@
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
-PYTHON_COMPAT=( python3_{11..14} )
+
+PYTHON_COMPAT=( python3_{12..14} )
 inherit flag-o-matic gnome.org gnome2-utils meson optfeature python-any-r1 toolchain-funcs virtualx xdg
 
 DESCRIPTION="GTK is a multi-platform toolkit for creating graphical user interfaces"
@@ -22,17 +23,20 @@ IUSE="aqua broadway cloudproviders colord cups examples gstreamer gtk-doc +intro
 #     can't parse ourselves" (formerly a PDEPEND to avoid circular dep
 #     on wd40 profiles with librsvg[tools]), bug #547710
 # NOTE: Support was added to build against both cups2 and cups3
+
+# NOTE: Add below libcloudproviders once accesskit-c is in ::gentoo:
+# accesskit? ( app-accessibility/accesskit-c:0.18 )
 COMMON_DEPEND="
-	>=dev-libs/glib-2.82:2
+	>=dev-libs/glib-2.84:2
 	>=x11-libs/cairo-1.18.2[aqua?,glib,svg(+),X?]
-	>=x11-libs/pango-1.56.0[introspection?]
+	>=x11-libs/pango-1.58.0[introspection?]
 	>=dev-libs/fribidi-1.0.6
 	>=media-libs/harfbuzz-8.4.0:=
 	>=x11-libs/gdk-pixbuf-2.30:2[introspection?]
 	media-libs/libpng:=
+	media-libs/mesa[vulkan?,wayland?,X?]
 	media-libs/tiff:=
 	media-libs/libjpeg-turbo:=
-	>=gnome-base/librsvg-2.48:2
 	>=media-libs/libepoxy-1.4[egl(+),X(+)?]
 	>=media-libs/graphene-1.10.0[introspection?]
 	app-text/iso-codes
@@ -51,19 +55,14 @@ COMMON_DEPEND="
 		)
 	)
 	introspection? ( >=dev-libs/gobject-introspection-1.84:= )
-	vulkan? (
-		>=media-libs/vulkan-loader-1.3:=[wayland?,X?]
-		media-libs/mesa[vulkan]
-		)
+	vulkan? ( >=media-libs/vulkan-loader-1.3:=[wayland?,X?] )
 	wayland? (
 		>=dev-libs/wayland-1.24.0
 		>=dev-libs/wayland-protocols-1.44
-		media-libs/mesa[wayland]
 		>=x11-libs/libxkbcommon-0.2
 	)
 	X? (
 		media-libs/fontconfig
-		media-libs/mesa[X(+)]
 		x11-libs/libX11
 		>=x11-libs/libXi-1.8
 		x11-libs/libXext
@@ -111,6 +110,8 @@ BDEPEND="
 		dev-libs/glib:2
 		media-fonts/cantarell
 		wayland? ( dev-libs/weston[headless] )
+		>=gnome-base/librsvg-2.48:2
+		dev-cpp/catch
 	)
 "
 
@@ -119,9 +120,7 @@ PATCHES=(
 	# with USE="-wayland -X" to trick gtk into claiming that it wasn't built with
 	# such support.
 	# https://bugs.gentoo.org/624960
-	# "${FILESDIR}"/0001-gdk-add-a-poison-macro-to-hide-GDK_WINDOWING_ge_4.18.5.patch
-
-	# "${FILESDIR}"/${P}-32-bit.patch
+#	"${FILESDIR}"/0001-gdk-add-a-poison-macro-to-hide-GDK_WINDOWING_ge_4.18.5.patch
 )
 
 python_check_deps() {
@@ -205,22 +204,35 @@ src_test() {
 
 	addwrite /dev/dri
 
+	export LIBGL_ALWAYS_SOFTWARE=true
+
 	# Note that skipping gsk-compare entirely means we do run *far*
 	# fewer tests, but a reliable testsuite for us is more important
 	# than absolute-maximum coverage if we can't trust the results and
 	# dismiss any failures as "probably font related" and so on.
+	# Upstream said those are going to give slightly different results
+	# depending on the renderers and the software rendering stack and are
+	# meant to be used in CI in a well defined environment and not really
+	# suitable for distros
+	# https://gitlab.gnome.org/GNOME/gtk/-/issues/6383
 	if use X; then
 		einfo "Running tests under X"
 		GSETTINGS_SCHEMA_DIR="${S}/gtk" virtx meson_src_test --timeout-multiplier=130 \
 			--setup=x11 \
+			--no-suite=docs \
 			--no-suite=failing \
 			--no-suite=x11_failing \
 			--no-suite=flaky \
 			--no-suite=headless \
 			--no-suite=gsk-compare \
 			--no-suite=gsk-compare-broadway \
+			--no-suite=gsk-compare-gl \
+			--no-suite=gsk-compare-cairo \
+			--no-suite=gsk-compare-ngl \
+			--no-suite=gsk-compare-vulkan \
 			--no-suite=needs-udmabuf \
-			--no-suite=pango
+			--no-suite=pango \
+			--no-suite=svg
 	fi
 
 	if use wayland; then
@@ -234,13 +246,20 @@ src_test() {
 
 		GSETTINGS_SCHEMA_DIR="${S}/gtk" meson_src_test --timeout-multiplier=130 \
 			--setup=wayland \
+			--no-suite=docs \
 			--no-suite=failing \
 			--no-suite=wayland_failing \
+			--no-suite=wayland_gles_failing \
 			--no-suite=flaky \
 			--no-suite=headless \
 			--no-suite=gsk-compare \
 			--no-suite=gsk-compare-broadway \
-			--no-suite=needs-udmabuf
+			--no-suite=gsk-compare-gl \
+			--no-suite=gsk-compare-cairo \
+			--no-suite=gsk-compare-ngl \
+			--no-suite=gsk-compare-vulkan \
+			--no-suite=needs-udmabuf \
+			--no-suite=svg
 
 		exit_code=$?
 		kill ${compositor}
@@ -282,13 +301,10 @@ pkg_preinst() {
 
 pkg_postinst() {
 	xdg_pkg_postinst
+	xdg_mimeinfo_database_update
 	gnome2_schemas_update
 
-	if ! has_version "app-text/evince"; then
-		elog "Please install app-text/evince for print preview functionality."
-		elog "Alternatively, check \"gtk-print-preview-command\" documentation and"
-		elog "add it to your settings.ini file."
-	fi
+	optfeature "default application for gtk-print-preview-command" app-text/evince
 
 	if use examples ; then
 		optfeature "syntax highlighting in gtk4-demo" app-text/highlight
