@@ -1,22 +1,23 @@
-# Copyright 2023-2025 Gentoo Authors
+# Copyright 2023-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
-PYTHON_COMPAT=( python3_{11..14} )
+
+PYTHON_COMPAT=( python3_{12..14} )
 
 inherit gnome.org gnome2-utils meson python-any-r1 virtualx xdg
 
 DESCRIPTION="GNOME's main interface to configure various aspects of the desktop"
 HOMEPAGE="https://apps.gnome.org/Settings"
-# SRC_URI+=" https://dev.gentoo.org/~pacho/${PN}/${PN}-48.3-patchset.tar.xz"
+SRC_URI+=" https://dev.gentoo.org/~pacho/${PN}/${PN}-50.4-patchset.tar.xz"
 SRC_URI+=" https://dev.gentoo.org/~mattst88/distfiles/${PN}-gentoo-logo.svg"
 SRC_URI+=" https://dev.gentoo.org/~mattst88/distfiles/${PN}-gentoo-logo-dark.svg"
 # Logo is CC-BY-SA-2.5
 LICENSE="GPL-2+ CC-BY-SA-2.5"
 SLOT="2"
-KEYWORDS="amd64 ~arm arm64 ~loong ~ppc ~ppc64 ~riscv x86"
+KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~x86"
 
-IUSE="X +bluetooth +cups debug elogind +gnome-online-accounts +ibus input_devices_wacom kerberos +geolocation networkmanager systemd test wayland"
+IUSE="+bluetooth +cups debug elogind +gnome-online-accounts +ibus input_devices_wacom kerberos +geolocation networkmanager systemd test"
 REQUIRED_USE="
 	^^ ( elogind systemd )
 " # Theoretically "?? ( elogind systemd )" is fine too, lacking some functionality at runtime,
@@ -30,26 +31,23 @@ RESTRICT="!test? ( test )"
 # printer panel requires cups and smbclient (the latter is not patched yet to be separately optional)
 # First block is toplevel meson.build deps in order of occurrence (plus deeper deps if in same conditional).
 # Second block is dependency() from subdir meson.builds, sorted by directory name occurrence order
+# TODO: add >=gnome-base/gmobile-0.6.0 above the accountsservice dep line
+# when packaged.
 DEPEND="
-	gnome-online-accounts? (
-		x11-libs/gtk+:3[X,wayland]
-		>=net-libs/gnome-online-accounts-3.51.0:=
-	)
+	gnome-online-accounts? ( >=net-libs/gnome-online-accounts-3.51.0:= )
 	>=media-libs/libpulse-2.0[glib]
-	>=gui-libs/gtk-4.17.1:4[X,wayland]
-	>=gui-libs/libadwaita-1.7_alpha:1
-	>=sys-apps/accountsservice-23.11.69
+	>=gui-libs/gtk-4.15.2:4[X,wayland]
+	>=gui-libs/libadwaita-1.8_alpha:1
+	>=sys-apps/accountsservice-23.11.69:=
 	>=x11-misc/colord-0.1.34:0=
 	>=x11-libs/gdk-pixbuf-2.23.0:2
 	>=dev-libs/glib-2.76.6:2
 	gnome-base/gnome-desktop:4=
-	>=gnome-base/gnome-settings-daemon-48_alpha[colord,input_devices_wacom?]
-	>=gnome-base/gsettings-desktop-schemas-48_alpha
+	>=gnome-base/gnome-settings-daemon-48_rc
+	>=gnome-base/gsettings-desktop-schemas-50_alpha
 	dev-libs/libxml2:2=
 	>=sys-power/upower-1.90.6:=
 	>=dev-libs/libgudev-232
-	>=x11-libs/libX11-1.8
-	>=x11-libs/libXi-1.2
 	media-libs/libepoxy
 	>=app-crypt/gcr-4.1.0
 	>=dev-libs/libpwquality-1.2.2
@@ -61,7 +59,7 @@ DEPEND="
 	ibus? ( >=app-i18n/ibus-1.5.2 )
 	networkmanager? (
 		>=net-libs/libnma-1.10.2
-		>=net-misc/networkmanager-1.24.0[modemmanager]
+		>=net-misc/networkmanager-1.52.0[modemmanager]
 		>=net-misc/modemmanager-0.7.990:=
 	)
 	bluetooth? ( net-wireless/gnome-bluetooth:3= )
@@ -106,11 +104,8 @@ RDEPEND="${DEPEND}
 		net-print/cups-pk-helper
 	)
 	>=gnome-extra/tecla-47.0
-	wayland? ( dev-libs/libinput )
-	!wayland? (
-		>=x11-drivers/xf86-input-libinput-0.19.0
-		input_devices_wacom? ( >=x11-drivers/xf86-input-wacom-0.33.0 )
-	)
+	dev-libs/libinput
+	input_devices_wacom? ( >=x11-drivers/xf86-input-wacom-0.33.0 )
 "
 # PDEPEND to avoid circular dependency; gnome-session-check-accelerated called by info panel
 # gnome-session-2.91.6-r1 also needed so that 10-user-dirs-update is run at login
@@ -124,24 +119,25 @@ BDEPEND="${PYTHON_DEPS}
 	app-text/docbook-xml-dtd:4.2
 	x11-base/xorg-proto
 	dev-libs/libxml2:2
+	>=dev-util/blueprint-compiler-0.19
 	dev-util/gdbus-codegen
 	dev-util/glib-utils
 	>=sys-devel/gettext-0.19.8
 	virtual/pkgconfig
-	dev-util/blueprint-compiler
 	test? (
 		$(python_gen_any_dep '
 			dev-python/python-dbusmock[${PYTHON_USEDEP}]
 		')
 		x11-apps/setxkbmap
 	)
+	dev-util/wayland-scanner
 "
 
 PATCHES=(
 	# Makes some panels and dependencies optional
 	# https://bugzilla.gnome.org/686840, 697478, 700145
 	# Fix some absolute paths to be appropriate for Gentoo
-	# "${WORKDIR}"/patches/
+#	"${WORKDIR}"/patches/
 )
 
 python_check_deps() {
@@ -162,32 +158,23 @@ src_prepare() {
 }
 
 src_configure() {
-	# -Werror=strict-aliasing
-	# https://bugs.gentoo.org/889008
-	# https://gitlab.gnome.org/GNOME/gnome-control-center/-/issues/2563
-	#
-	# Do not trust with LTO either
-	append-flags -fno-strict-aliasing
-	filter-lto
-
 	local emesonargs=(
-		# $(meson_use bluetooth)
-		# $(meson_use cups)
+#		$(meson_use bluetooth)
+#		$(meson_use cups)
 		-Ddeprecated-declarations=disabled
 		-Ddocumentation=true # manpage
 		-Dlocation-services=$(usex geolocation enabled disabled)
-		# -Dgoa=$(usex gnome-online-accounts enabled disabled)
+#		-Dgoa=$(usex gnome-online-accounts enabled disabled)
 		$(meson_use ibus)
-		# $(meson_use kerberos)
-		# $(meson_use networkmanager network_manager)
+#		$(meson_use kerberos)
+#		$(meson_use networkmanager network_manager)
 		-Dprivileged_group=wheel
 		-Dsnap=false
 		$(meson_use test tests)
-		# $(meson_use input_devices_wacom wacom)
-		#$(meson_use wayland) # doesn't do anything in 3.34 and 3.36 due to unified gudev handling code
+#		$(meson_use input_devices_wacom wacom)
 		# bashcompletions installed to $datadir/bash-completion/completions by v3.28.2,
 		# which is the same as $(get_bashcompdir)
-		-Dmalcontent=false # unpackaged
+		-Dmalcontent=false # unpackaged in the main tree
 		-Ddistributor_logo=/usr/share/pixmaps/gnome-control-center-gentoo-logo.svg
 		-Ddark_mode_distributor_logo=/usr/share/pixmaps/gnome-control-center-gentoo-logo-dark.svg
 	)
