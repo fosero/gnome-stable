@@ -3,7 +3,7 @@
 
 EAPI=8
 
-inherit desktop gnome.org gnome2-utils meson pam readme.gentoo-r1 systemd udev xdg
+inherit desktop gnome.org gnome2-utils meson pam readme.gentoo-r1 systemd xdg
 
 DESCRIPTION="GNOME Display Manager for managing graphical display servers and user logins"
 HOMEPAGE="https://gitlab.gnome.org/GNOME/gdm"
@@ -19,9 +19,9 @@ LICENSE="
 
 SLOT="0"
 
-KEYWORDS="~amd64 ~arm ~arm64 ~x86"
+KEYWORDS="~amd64 ~arm ~arm64 ~riscv ~x86"
 
-IUSE="audit debug bluetooth-sound branding elogind fprint plymouth selinux systemd tcpd test +X"
+IUSE="audit debug branding elogind fprint plymouth selinux systemd test video_cards_nvidia +X"
 
 RESTRICT="!test? ( test )"
 REQUIRED_USE="^^ ( elogind systemd )"
@@ -31,23 +31,15 @@ REQUIRED_USE="^^ ( elogind systemd )"
 # when all the passwords match (disk encryption, user pw and login keyring)
 # dbus-run-session used at runtime.
 COMMON_DEPEND="
-	virtual/udev
 	>=dev-libs/libgudev-232:=
 	>=dev-libs/glib-2.68:2
 	>=dev-libs/json-glib-1.2.0
-	>=sys-apps/accountsservice-0.6.35
+	>=sys-apps/accountsservice-0.6.35:=
+	sys-auth/polkit
 	sys-apps/keyutils:=
 	selinux? ( sys-libs/libselinux )
 
-	X? (
-		x11-libs/libxcb
-		x11-libs/libX11
-		x11-libs/libXau
-		x11-base/xorg-server[-minimal]
-		x11-libs/libXdmcp
-		>=x11-libs/gtk+-2.91.1:3
-	)
-	tcpd? ( >=sys-apps/tcp-wrappers-7.6 )
+	X? ( x11-libs/libXau )
 
 	systemd? ( >=sys-apps/systemd-257:0=[pam] )
 	elogind? ( >=sys-auth/elogind-239.3[pam] )
@@ -72,10 +64,17 @@ COMMON_DEPEND="
 RDEPEND="${COMMON_DEPEND}
 	acct-group/gdm
 	acct-user/gdm
-	>=gnome-base/gnome-shell-49
+	>=gnome-base/gnome-shell-50
 	x11-apps/xhost
 
 	fprint? ( sys-auth/fprintd[pam] )
+
+	systemd? (
+		video_cards_nvidia? (
+			x11-drivers/nvidia-drivers
+			sys-apps/acl
+		)
+	)
 "
 # This is a 'workaround' built into gdm 49, as elogind does not yet have
 # 'working' userdb support in stable or testing.
@@ -138,11 +137,7 @@ src_configure() {
 		-Drun-dir=/run/gdm
 		$(meson_feature selinux)
 		$(meson_use systemd systemd-journal)
-#		-Dudev-dir=$(get_udevdir)/rules.d
-#		-Duser=gdm
-#		-Duser-display-server=true
 		$(meson_use X x11-support)
-#		$(meson_feature X xdmcp)
 	)
 
 	if use elogind; then
@@ -165,11 +160,11 @@ src_configure() {
 src_install() {
 	meson_src_install
 
-	if ! use bluetooth-sound ; then
-		# Workaround https://gitlab.freedesktop.org/pulseaudio/pulseaudio/merge_requests/10
-		# bug #679526
-		insinto /var/lib/gdm/.config/pulse
-		doins "${FILESDIR}"/default.pa
+	# Ensure that gdm-greeter-XXX dynamic users have the needed
+	# permissions on nvidia systems, bug #973590
+	if use systemd && use video_cards_nvidia; then
+		insinto /usr/lib/systemd/system/gdm.service.d
+		doins "${FILESDIR}/90-nvidia-acl.conf"
 	fi
 
 	# install XDG_DATA_DIRS gdm changes
@@ -199,11 +194,9 @@ pkg_postinst() {
 	systemd_reenable gdm.service
 	readme.gentoo_print_elog
 
-	udev_reload
 }
 
 pkg_postrm() {
 	xdg_pkg_postrm
 	gnome2_schemas_update
-	udev_reload
 }
